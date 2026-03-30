@@ -1,0 +1,25 @@
+"gender_minority","period","item_label","wtd_mean","n","se","ci_lo","ci_hi"
+"Cisgender","Post-Kirk","Express opinions
+at work/school",1.52769043909872,1220,0.023169184943352,1.48227883660975,1.57310204158769
+"Cisgender","Post-Kirk","Express political
+opinions online",1.42036345154218,1052,0.0244503349374242,1.37244079506483,1.46828610801953
+"Cisgender","Post-Kirk","Respond to posts
+you disagree with",1.35671237531545,1035,0.0235760965469074,1.31050322608351,1.40292152454739
+"Cisgender","Pre-Kirk","Express opinions
+at work/school",1.54480783301387,4541,0.0115680780877444,1.52213439996189,1.56748126606585
+"Cisgender","Pre-Kirk","Express political
+opinions online",1.44570326808316,3934,0.0125401543933928,1.42112456547211,1.4702819706942
+"Cisgender","Pre-Kirk","Respond to posts
+you disagree with",1.35564323536081,3850,0.0115556848604131,1.3329940930344,1.37829237768722
+"Trans / Non-binary","Post-Kirk","Express opinions
+at work/school",2.04937550860987,48,0.131965886928308,1.79072237023039,2.30802864698936
+"Trans / Non-binary","Post-Kirk","Express political
+opinions online",2.05749420314653,49,0.136520713255449,1.78991360516585,2.32507480112721
+"Trans / Non-binary","Post-Kirk","Respond to posts
+you disagree with",2.01694917524074,47,0.146759298786336,1.72930094961952,2.30459740086196
+"Trans / Non-binary","Pre-Kirk","Express opinions
+at work/school",1.79231709178734,118,0.0779156012308239,1.63960251337492,1.94503167019975
+"Trans / Non-binary","Pre-Kirk","Express political
+opinions online",1.82505406099137,122,0.0789814125182877,1.67025049245552,1.97985762952721
+"Trans / Non-binary","Pre-Kirk","Respond to posts
+you disagree with",1.69135062950363,107,0.085459954571543,1.5238491185434,1.85885214046385

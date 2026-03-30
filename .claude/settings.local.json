@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"C:/Users/math_/Dropbox/PC/Documents/GitHub/trans_incident/.claude/hooks\")",
+      "Bash(mkdir -p \"C:/Users/math_/Dropbox/PC/Documents/GitHub/trans_incident/.claude/logs\")",
+      "Bash(chmod:*)",
+      "WebSearch",
+      "WebFetch(domain:www.france24.com)",
+      "WebFetch(domain:www.isdglobal.org)"
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+"gender_minority","context","item_label","wtd_mean","n","se","ci_lo","ci_hi"
+"Cisgender","About Kirk assassination","Express opinions
+at work/school",1.98331121942884,640,0.0520510253588845,1.88129120972543,2.08533122913226
+"Cisgender","About Kirk assassination","Express political
+opinions",1.9065269020363,641,0.05293061808828,1.80278289058327,2.01027091348933
+"Cisgender","About Kirk assassination","Respond to posts
+you disagree with",1.71227963407834,641,0.046483933536986,1.62117112434585,1.80338814381084
+"Cisgender","General","Express opinions
+at work/school",1.49644787148741,287,0.0435058566313982,1.41117639248987,1.58171935048495
+"Cisgender","General","Express political
+opinions",1.3395771880435,241,0.0430565662234517,1.25518631824553,1.42396805784146
+"Cisgender","General","Respond to posts
+you disagree with",1.3313800984643,256,0.0443263901321648,1.24450037380526,1.41825982312334
+"Trans / Non-binary","About Kirk assassination","Express opinions
+at work/school",2.33435066449113,11,0.566679757416434,1.22365833995492,3.44504298902734
+"Trans / Non-binary","About Kirk assassination","Express political
+opinions",2.77228142619326,11,0.313427381015586,2.15796375940271,3.38659909298381
+"Trans / Non-binary","About Kirk assassination","Respond to posts
+you disagree with",2.53137817722984,11,0.316055099036695,1.91191018311792,3.15084617134176
+"Trans / Non-binary","General","Express opinions
+at work/school",2.40026602697634,8,0.290608117371529,1.83067411692815,2.96985793702454
+"Trans / Non-binary","General","Express political
+opinions",2.27665595354735,10,0.332407877091117,1.62513651444876,2.92817539264594
+"Trans / Non-binary","General","Respond to posts
+you disagree with",2.27338877671573,11,0.337860601055397,1.61118199864715,2.9355955547843
