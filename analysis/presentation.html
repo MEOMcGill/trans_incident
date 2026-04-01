@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trans Panic Narratives Around Mass Shootings</title>
+<script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f172a; --surface: #1e293b; --surface2: #334155;
+    --text: #f1f5f9; --text-muted: #94a3b8;
+    --accent: #38bdf8; --accent2: #818cf8;
+    --red: #f87171; --green: #4ade80; --orange: #fb923c;
+  }
+  html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+
+  .slide { display: none; min-height: 100vh; padding: 50px 70px; flex-direction: column; justify-content: center; }
+  .slide.active { display: flex; }
+  .slide.active .anim {
+    opacity: 0; transform: translateY(20px);
+    animation: slideUp 0.5s ease forwards;
+  }
+  .slide.active .anim:nth-child(1) { animation-delay: 0.05s; }
+  .slide.active .anim:nth-child(2) { animation-delay: 0.12s; }
+  .slide.active .anim:nth-child(3) { animation-delay: 0.19s; }
+  .slide.active .anim:nth-child(4) { animation-delay: 0.26s; }
+  .slide.active .anim:nth-child(5) { animation-delay: 0.33s; }
+  .slide.active .anim:nth-child(6) { animation-delay: 0.40s; }
+  .slide.active .anim:nth-child(7) { animation-delay: 0.47s; }
+  .slide.active .anim:nth-child(8) { animation-delay: 0.54s; }
+  .slide.active .anim:nth-child(9) { animation-delay: 0.61s; }
+  .slide.active .anim:nth-child(10) { animation-delay: 0.68s; }
+
+  @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+  @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+  @keyframes fadeInLeft { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes fadeInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(56,189,248,0); }
+    50% { box-shadow: 0 0 20px 4px rgba(56,189,248,0.15); }
+  }
+  @keyframes countUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .nav {
+    position: fixed; bottom: 20px; right: 30px;
+    display: flex; gap: 10px; z-index: 100; align-items: center;
+  }
+  .nav button {
+    background: var(--surface2); border: none; color: var(--text);
+    padding: 10px 18px; border-radius: 8px; cursor: pointer;
+    font-size: 14px; font-family: inherit; font-weight: 500;
+    transition: all 0.25s ease;
+  }
+  .nav button:hover { background: var(--accent); color: var(--bg); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(56,189,248,0.3); }
+  .nav button:active { transform: translateY(0); }
+  .nav .counter { font-size: 13px; color: var(--text-muted); }
+
+  .progress { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.4s cubic-bezier(0.4,0,0.2,1); z-index: 100; }
+
+  h1 { font-size: 48px; font-weight: 700; line-height: 1.1; margin-bottom: 16px; }
+  h2 { font-size: 36px; font-weight: 600; line-height: 1.2; margin-bottom: 20px; color: var(--accent); }
+  h3 { font-size: 24px; font-weight: 600; margin-bottom: 14px; }
+  p, li { font-size: 20px; line-height: 1.6; color: var(--text-muted); }
+  .slide p + p { margin-top: 14px; }
+
+  .title-slide h1 { font-size: 56px; opacity: 0; animation: slideUp 0.8s ease 0.1s forwards; }
+  .title-slide .subtitle { font-size: 22px; color: var(--text-muted); margin-bottom: 40px; opacity: 0; animation: slideUp 0.8s ease 0.3s forwards; }
+  .title-slide .meta { font-size: 16px; color: var(--surface2); border-top: 1px solid var(--surface2); padding-top: 20px; margin-top: 20px; opacity: 0; animation: slideUp 0.8s ease 0.5s forwards; }
+  .title-slide .meta span { color: var(--text-muted); }
+
+  .takeaway { background: var(--surface); border-radius: 12px; padding: 24px 28px; margin-bottom: 16px; border-left: 4px solid var(--accent); transition: all 0.3s ease; cursor: default; }
+  .takeaway:hover { transform: translateX(8px); background: var(--surface2); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+  .takeaway strong { color: var(--text); font-weight: 600; }
+  .takeaway p { font-size: 17px; margin: 0; }
+
+  .stats { display: flex; gap: 24px; margin: 24px 0; flex-wrap: wrap; }
+  .stat { background: var(--surface); border-radius: 12px; padding: 24px 30px; flex: 1; min-width: 200px; text-align: center; transition: all 0.3s ease; cursor: default; }
+  .stat:hover { transform: translateY(-6px); box-shadow: 0 8px 30px rgba(0,0,0,0.4); background: var(--surface2); }
+  .stat .number { font-size: 48px; font-weight: 700; color: var(--accent); line-height: 1; }
+  .stat .number.red { color: var(--red); }
+  .stat .number.green { color: var(--green); }
+  .stat .number.orange { color: var(--orange); }
+  .stat .label { font-size: 14px; color: var(--text-muted); margin-top: 8px; }
+
+  .chart-container { width: 100%; margin: 12px 0; opacity: 0; }
+  .slide.active .chart-container { animation: scaleIn 0.5s ease 0.2s forwards; }
+
+  ul, ol { padding-left: 28px; }
+  li { margin-bottom: 10px; }
+  li strong { color: var(--text); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
+  .slide.active .two-col > :first-child { opacity: 0; animation: fadeInLeft 0.5s ease 0.15s forwards; }
+  .slide.active .two-col > :last-child { opacity: 0; animation: fadeInRight 0.5s ease 0.25s forwards; }
+
+  .cat-list { list-style: none; padding: 0; }
+  .cat-list li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--surface2); font-size: 18px; transition: all 0.2s ease; }
+  .cat-list li:hover { padding-left: 12px; background: var(--surface); border-radius: 6px; }
+  .cat-list .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; transition: transform 0.2s ease; }
+  .cat-list li:hover .dot { transform: scale(1.5); }
+
+  .section-slide { justify-content: center; align-items: center; text-align: center; }
+  .section-slide h2 { font-size: 44px; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; opacity: 0; }
+  .section-slide.active h2 { animation: slideUp 0.6s ease 0.1s forwards; }
+  .section-slide p { max-width: 600px; opacity: 0; }
+  .section-slide.active p { animation: slideUp 0.6s ease 0.3s forwards; }
+
+  .method-text p, .method-text li { font-size: 16px; line-height: 1.5; }
+
+  .keyboard-hint { position: fixed; bottom: 24px; left: 30px; font-size: 12px; color: var(--surface2); transition: opacity 0.3s; }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<!-- Slide 1: Title -->
+<div class="slide title-slide active" data-slide="0">
+  <h1>Trans Panic Narratives Around Mass Shootings</h1>
+  <p class="subtitle">The Tumbler Ridge shooting and anti-trans discourse in the Canadian information ecosystem</p>
+  <div class="meta">
+    <span>Team: Mathieu, Saewon, Ben</span> &middot;
+    <span>March 2026</span> &middot;
+    <span>Media Ecosystem Observatory</span>
+  </div>
+</div>
+
+<!-- Slide 2: Key Takeaways -->
+<div class="slide" data-slide="1">
+  <h2 class="anim">Key Takeaways</h2>
+  <div class="takeaway anim">
+    <p><strong>Trans panic narratives were significant but a minority</strong> of Tumbler Ridge shooting discussions, driven primarily by influencers.</p>
+  </div>
+  <div class="takeaway anim" style="border-color: var(--red);">
+    <p><strong>Negative rhetoric dominated engagement</strong> with trans-related posts, especially violence association and identity denial.</p>
+  </div>
+  <div class="takeaway anim" style="border-color: var(--orange);">
+    <p><strong>Canadians are deeply polarized on gender identity</strong> along ideological lines. Only 8% of left-leaning vs 66% of right-leaning believe schools indoctrinate with gender ideology.</p>
+  </div>
+  <div class="takeaway anim" style="border-color: var(--green);">
+    <p><strong>Trans and non-binary Canadians are not less likely to participate</strong> in online political spaces despite a hostile environment.</p>
+  </div>
+</div>
+
+<!-- Slide 3: Context -->
+<div class="slide" data-slide="2">
+  <h2 class="anim">Context</h2>
+  <p class="anim">On February 10, 2026, 18-year-old Jesse Van Rootselaar killed her mother and half-brother at home in Tumbler Ridge, BC, then walked to Tumbler Ridge Secondary School, killing six and wounding 27 before dying by suicide. Canada's deadliest school shooting since 1989.</p>
+  <p class="anim">The next day, RCMP confirmed Van Rootselaar was a trans woman. Within hours:</p>
+  <ul style="margin-top: 12px;">
+    <li class="anim">A fraudulent X account was renamed to match the shooter's YouTube channel with white supremacist content</li>
+    <li class="anim">A BC MLA tweeted about the "transgender violence epidemic"</li>
+    <li class="anim">An unrelated trans woman in Ontario was misidentified across platforms</li>
+    <li class="anim">Elon Musk pushed viral charts claiming trans people are disproportionately responsible for mass shootings (reality: &lt;0.1%)</li>
+  </ul>
+</div>
+
+<!-- Slide 4: Prior incidents -->
+<div class="slide" data-slide="3">
+  <h2 class="anim">A Pattern of Weaponization</h2>
+  <p class="anim">Tumbler Ridge follows three prior incidents where trans identity was weaponized after mass violence:</p>
+  <div class="stats" style="margin-top: 24px;">
+    <div class="stat anim" style="text-align: left;">
+      <div class="number" style="font-size: 28px;">2023</div>
+      <div class="label" style="font-size: 16px; margin-top: 12px;">Nashville school shooting &mdash; shooter revealed to be transgender</div>
+    </div>
+    <div class="stat anim" style="text-align: left;">
+      <div class="number" style="font-size: 28px;">2024</div>
+      <div class="label" style="font-size: 16px; margin-top: 12px;">Annunciation shooting &mdash; shooter revealed to be trans</div>
+    </div>
+    <div class="stat anim" style="text-align: left;">
+      <div class="number" style="font-size: 28px;">2025</div>
+      <div class="label" style="font-size: 16px; margin-top: 12px;">Charlie Kirk assassination &mdash; shooter's partner was transgender</div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 5: Research Questions -->
+<div class="slide" data-slide="4">
+  <h2 class="anim">Research Questions</h2>
+  <div style="margin-top: 10px;">
+    <div class="takeaway anim" style="border-color: var(--accent);"><p><strong>1.</strong> What was the salience of the trans panic narrative and its source?</p></div>
+    <div class="takeaway anim" style="border-color: var(--accent2);"><p><strong>2.</strong> What was the nature and reach of negative speech about transgenderism?</p></div>
+    <div class="takeaway anim" style="border-color: var(--green);"><p><strong>3.</strong> Are Canadians polarized on gender identity, and does it suppress trans participation online?</p></div>
+  </div>
+</div>
+
+<!-- Slide 6: Section divider - RQ1 -->
+<div class="slide section-slide" data-slide="5">
+  <h2>RQ1: Salience and Source</h2>
+  <p>What share of the discussion mentioned transgenderism, and who was driving it?</p>
+</div>
+
+<!-- Slide 7: Volume (interactive) -->
+<div class="slide" data-slide="6">
+  <h2 class="anim">Post Volume Spiked After the Shooting</h2>
+  <p class="anim">Posts about Tumbler Ridge spiked on Feb 11 (UTC). Trans-related discussion increased but remained a minority.</p>
+  <div class="chart-container" id="fig1" style="height: 420px;"></div>
+</div>
+
+<!-- Slide 8: Source (interactive) -->
+<div class="slide" data-slide="7">
+  <h2 class="anim">Influencers Drove Trans-Related Discourse</h2>
+  <p class="anim">Influencers were the main source. News outlets, politicians, and government organizations rarely linked the incident to transgenderism.</p>
+  <div class="chart-container" style="text-align: center;">
+    <img src="figures/keyword_filtered_feb26_maintype_by_type.png" alt="Posts by seed type"
+         style="max-width: 100%; max-height: 50vh; border-radius: 8px; background: white; padding: 8px; cursor: zoom-in; transition: transform 0.3s;"
+         onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+    <div style="font-size: 13px; color: #64748b; margin-top: 8px; font-style: italic;">Figure 2. Source of posts about the Tumbler Ridge shooting and transgenderism (Feb 10&ndash;28)</div>
+  </div>
+</div>
+
+<!-- Slide 9: Section divider - RQ2 -->
+<div class="slide section-slide" data-slide="8">
+  <h2>RQ2: Nature and Reach of Negative Speech</h2>
+  <p>How much engagement did negative rhetoric receive, and what themes dominated?</p>
+</div>
+
+<!-- Slide 10: Classification -->
+<div class="slide" data-slide="9">
+  <h2 class="anim">Classification Approach</h2>
+  <p class="anim">Using Claude Haiku 4.5, we classified the <strong style="color: var(--text);">top 20 posts per day</strong> in February 2026 (Canadian seeds, 560 posts).</p>
+  <div class="stats anim">
+    <div class="stat"><div class="number" data-count="55">0%</div><div class="label">negative rhetoric</div></div>
+    <div class="stat"><div class="number red" data-count="307">0</div><div class="label">anti-trans</div></div>
+    <div class="stat"><div class="number green" data-count="150">0</div><div class="label">pro-trans</div></div>
+    <div class="stat"><div class="number orange" data-count="102">0</div><div class="label">neutral</div></div>
+  </div>
+  <ul class="cat-list" style="margin-top: 16px;">
+    <li class="anim"><span class="dot" style="background: #9b59b6;"></span><strong>Violence association</strong> &mdash; Trans people with violence or criminality</li>
+    <li class="anim"><span class="dot" style="background: #e74c3c;"></span><strong>Ideology framing</strong> &mdash; Dismissing trans identity as ideology or trend</li>
+    <li class="anim"><span class="dot" style="background: #3498db;"></span><strong>Conspiracy</strong> &mdash; Hidden agenda/lobby claims</li>
+    <li class="anim"><span class="dot" style="background: #2ecc71;"></span><strong>Mockery</strong> &mdash; Ridiculing trans people or identities</li>
+    <li class="anim"><span class="dot" style="background: #f39c12;"></span><strong>Identity denial</strong> &mdash; Denying trans identities, misgendering</li>
+    <li class="anim"><span class="dot" style="background: #1abc9c;"></span><strong>Child protection</strong> &mdash; Child safety rhetoric against trans rights</li>
+  </ul>
+</div>
+
+<!-- Slide 11: Engagement (interactive) -->
+<div class="slide" data-slide="10">
+  <h2 class="anim">Engagement Concentrated in Negative Rhetoric</h2>
+  <div class="chart-container" id="fig3" style="height: 520px;"></div>
+</div>
+
+<!-- Slide 12: Before/after -->
+<div class="slide" data-slide="11">
+  <h2 class="anim">The Shooting Weaponized Existing Discourse</h2>
+  <div class="two-col">
+    <div>
+      <h3>Before Feb 10</h3>
+      <div class="stats" style="flex-direction: column; gap: 12px;">
+        <div class="stat" style="padding: 16px 20px; text-align: left;">
+          <div class="number" style="font-size: 36px;" data-count="50">0%</div>
+          <div class="label">anti-trans rate</div>
+        </div>
+      </div>
+      <p style="font-size: 17px; margin-top: 12px;">Ideology framing (28%), conspiracy (19%), child protection (19%). Violence association only <strong style="color: var(--text);">5%</strong>.</p>
+    </div>
+    <div>
+      <h3>Week After (Feb 11&ndash;17)</h3>
+      <div class="stats" style="flex-direction: column; gap: 12px;">
+        <div class="stat" style="padding: 16px 20px; text-align: left; animation: pulseGlow 2s ease infinite;">
+          <div class="number red" style="font-size: 36px;" data-count="74">0%</div>
+          <div class="label">anti-trans rate</div>
+        </div>
+      </div>
+      <p style="font-size: 17px; margin-top: 12px;">Violence association to <strong style="color: var(--red);">49%</strong>. Conspiracy doubles. Identity denial triples.</p>
+    </div>
+  </div>
+  <p class="anim" style="margin-top: 24px; font-size: 17px;">The baseline <strong style="color: var(--text);">never returned to pre-shooting levels</strong>. Feb 18&ndash;28 held at 75%.</p>
+</div>
+
+<!-- Slide 13: Threats -->
+<div class="slide" data-slide="12">
+  <h2 class="anim">Explicit Threats Were Absent</h2>
+  <p class="anim">We searched all 11,211 posts from our seedlist for explicit violent threats, and also examined datasets from previous shootings with notable trans violence discourse.</p>
+  <div class="stats anim" style="margin-top: 24px;">
+    <div class="stat"><div class="number" data-count="0">0</div><div class="label">threats in Tumbler Ridge seedlist</div></div>
+    <div class="stat"><div class="number red" data-count="9">0</div><div class="label">threats found in Charlie Kirk dataset</div></div>
+  </div>
+  <p class="anim" style="margin-top: 20px;">The 9 explicit threats were all from the Charlie Kirk dataset, where tweets were collected en masse (not just large accounts). A third had been deleted. None had community notes &mdash; likely because all had very few or zero likes. Hostility in prominent Canadian accounts is <strong style="color: var(--text);">coded and indirect</strong>, not overt threats.</p>
+</div>
+
+<!-- Slide 14: Section divider - RQ3 -->
+<div class="slide section-slide" data-slide="13">
+  <h2>RQ3: Polarization and Participation</h2>
+  <p>Are Canadians polarized on gender identity, and does hostility suppress trans voices?</p>
+</div>
+
+<!-- Slide 15: Polarization (interactive) -->
+<div class="slide" data-slide="14">
+  <div class="two-col" style="grid-template-columns: 1fr 1fr;">
+    <div>
+      <h2 class="anim">Deep Ideological Polarization</h2>
+      <p class="anim">"Schools are indoctrinating kids with radical gender ideology" &mdash; % who believe probably/definitely true</p>
+      <p class="anim" style="margin-top: 16px;">Ideology is the strongest predictor. Age and gender play a more modest role. Social media use does not appear, in itself, to be related.</p>
+      <p class="anim" style="font-size: 14px; margin-top: 16px; color: #475569;">MEO | October 2025 Tracking Survey | English-speaking respondents | N = 710</p>
+    </div>
+    <div style="text-align: center;">
+      <img src="../figures/gender_ideology_belief.png" alt="Gender ideology beliefs"
+           style="max-width: 100%; max-height: 75vh; border-radius: 8px; background: white; padding: 8px; cursor: zoom-in; transition: transform 0.3s;"
+           onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+      <div style="font-size: 13px; color: #64748b; margin-top: 8px; font-style: italic;">Figure 4</div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 16: Participation (interactive) -->
+<div class="slide" data-slide="15">
+  <div class="two-col" style="grid-template-columns: 1fr 1fr;">
+    <div>
+      <h2 class="anim">Trans and Non-Binary Canadians Are More Active Online</h2>
+      <p class="anim" style="font-size: 18px;">Despite the hostile environment, trans and non-binary Canadians report greater comfort and frequency of online political expression.</p>
+      <p class="anim" style="font-size: 18px; margin-top: 12px;">These differences hold after controlling for age, political interest, SM use, education, region, and survey wave &mdash; but do <strong style="color: var(--text);">not</strong> extend to offline speech.</p>
+      <p class="anim" style="font-size: 18px; margin-top: 12px;">Consistent with an <em>activated minority</em> framework.</p>
+      <p class="anim" style="font-size: 14px; margin-top: 16px; color: #475569;">MEO | 17 tracking surveys, Jul 2024 &ndash; Feb 2026 | Cisgender N=32,041, Non-binary/Trans N=591</p>
+    </div>
+    <div style="text-align: center;">
+      <img src="../figures/combined_expression.png" alt="Political expression by gender identity"
+           style="max-width: 100%; max-height: 75vh; border-radius: 8px; background: white; padding: 8px; cursor: zoom-in; transition: transform 0.3s;"
+           onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+      <div style="font-size: 13px; color: #64748b; margin-top: 8px; font-style: italic;">Figure 5</div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 17: Implications -->
+<div class="slide" data-slide="16">
+  <h2 class="anim">Implications &amp; Recommendations</h2>
+  <p class="anim" style="font-size: 17px; margin-bottom: 16px;">This incident follows a now-recognizable pattern: revelation of a transgender connection, rapid spread of misleading statistics, creation of fraudulent accounts, and misidentification of unrelated individuals.</p>
+  <div class="takeaway anim"><p><strong>1. Develop rapid response protocols for the trans panic playbook.</strong> The predictability of this cycle means monitoring organizations can prepare fact-checks and counter-narrative resources in advance, ready to deploy during the early, fact-poor window when misinfo spreads fastest.</p></div>
+  <div class="takeaway anim" style="border-color: var(--red);"><p><strong>2. Platforms must improve detection of identity fraud during breaking news.</strong> Fraudulent accounts, misidentification of unrelated individuals, and viral debunked statistics create direct safety risks. Newsrooms should adopt stricter verification before publishing identity claims.</p></div>
+  <div class="takeaway anim" style="border-color: var(--green);"><p><strong>3. Invest in understanding how hostile climates affect trans civic participation.</strong> Those who remain closeted or have withdrawn from online spaces entirely are not captured in surveys. Online expression may serve as a safer outlet rather than reflecting overall comfort.</p></div>
+</div>
+
+<!-- Slide 18: Limitations -->
+<div class="slide" data-slide="17">
+  <h2 class="anim">Limitations</h2>
+  <ul style="margin-top: 12px;">
+    <li class="anim">Focused on prominent Canadian accounts &mdash; explicit threats are more likely from smaller, anonymous users</li>
+    <li class="anim">Focused on social media posts &mdash; threats may be more common in comments on posts mentioning the shooting</li>
+    <li class="anim">Haiku 4.5 classification not validated against human coders for this task</li>
+    <li class="anim">Top-20-per-day sampling captures high-engagement posts but may miss lower-engagement patterns</li>
+    <li class="anim">Trans participation finding is correlational &mdash; gender minorities open enough to self-identify in a survey may also be more politically activated</li>
+    <li class="anim">Gender ideology question fielded to English-speaking respondents only due to survey coding error</li>
+  </ul>
+  <div class="anim" style="margin-top: 24px; padding: 16px 20px; background: var(--surface); border-radius: 8px; border-left: 3px solid var(--accent2);">
+    <p style="font-size: 15px; margin: 0;"><strong style="color: var(--accent2);">A note on AI:</strong> Claude (Anthropic) was used for post classification (Haiku 4.5), data visualization, and prose drafting. All code, classifications, and content were reviewed, tested, and verified by the research team. Study design, data collection, and statistical analysis were led by the researchers.</p>
+  </div>
+</div>
+
+<!-- Slide 19: Methodology -->
+<div class="slide method-text" data-slide="18">
+  <h2 class="anim">Methodology</h2>
+  <div class="two-col">
+    <div>
+      <h3>Social media data</h3>
+      <ul>
+        <li>Seedlist of politically influential Canadian entities</li>
+        <li>Feb 2026 posts filtered by Tumbler Ridge + trans/queer keywords</li>
+        <li>11,211 posts (7,512 incident, 4,313 trans, 614 both)</li>
+        <li>Top 20 trans posts/day classified by Claude Haiku 4.5</li>
+        <li>560 posts classified (Canadian seeds only)</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Survey data</h3>
+      <ul>
+        <li>MEO monthly tracking survey, Jul 2024 &ndash; Feb 2026</li>
+        <li>~1,500/month (Leger panel), 32,632 total</li>
+        <li>Post-stratification weights on age, gender, region</li>
+        <li>Gender ideology: Oct 2025 (N=710, English only)</li>
+        <li>Political expression: 17 waves (N=32,632)</li>
+        <li>OLS, wave-clustered SEs, standard controls</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+  <button onclick="prev()">&larr; Prev</button>
+  <span class="counter" id="counter">1 / 19</span>
+  <button onclick="next()">Next &rarr;</button>
+</div>
+<div class="keyboard-hint" id="hint">Arrow keys or Space to navigate</div>
+
+<script>
+// ── Slide navigation ────────────────────────────────────────────────────────
+const slides = document.querySelectorAll('.slide');
+let current = 0;
+const chartInited = new Set();
+
+function show(n) {
+  if (n === current && n !== 0) return;
+  slides[current].classList.remove('active');
+  current = Math.max(0, Math.min(n, slides.length - 1));
+  const slide = slides[current];
+  void slide.offsetWidth;
+  slide.classList.add('active');
+  document.getElementById('counter').textContent = (current + 1) + ' / ' + slides.length;
+  document.getElementById('progress').style.width = ((current + 1) / slides.length * 100) + '%';
+  runCounters(slide);
+  document.getElementById('hint').style.opacity = '0';
+  // Lazy-init charts when their slide becomes active
+  const idx = parseInt(slide.dataset.slide);
+  if (!chartInited.has(idx)) {
+    chartInited.add(idx);
+    if (idx === 6) initFig1();
+    if (idx === 10) initFig3();
+  }
+}
+
+function next() { show(current + 1); }
+function prev() { show(current - 1); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+});
+
+function runCounters(slide) {
+  slide.querySelectorAll('[data-count]').forEach(el => {
+    const target = parseInt(el.dataset.count);
+    const suffix = el.textContent.includes('%') ? '%' : '';
+    const duration = 800;
+    const start = performance.now();
+    function tick(now) {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = Math.round(eased * target) + suffix;
+      if (t < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+const plotlyConfig = { displayModeBar: false, responsive: true };
+const darkLayout = {
+  paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+  font: { family: 'Inter', color: '#94a3b8' },
+  xaxis: { gridcolor: '#1e293b', zerolinecolor: '#334155' },
+  yaxis: { gridcolor: '#1e293b', zerolinecolor: '#334155' },
+  margin: { l: 60, r: 20, t: 40, b: 50 },
+  hoverlabel: { bgcolor: '#1e293b', bordercolor: '#334155', font: { color: '#f1f5f9', family: 'Inter' } },
+};
+
+// ── Fig 1: Daily volume stacked area ────────────────────────────────────────
+function initFig1() {
+  const dates = ["2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04", "2026-02-05", "2026-02-06", "2026-02-07", "2026-02-08", "2026-02-09", "2026-02-10", "2026-02-11", "2026-02-12", "2026-02-13", "2026-02-14", "2026-02-15", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", "2026-02-21", "2026-02-22", "2026-02-23", "2026-02-24", "2026-02-25", "2026-02-26", "2026-02-27", "2026-02-28"];
+  const shooting = '2026-02-10';
+  Plotly.newPlot('fig1', [
+    { x: dates, y: [0, 0, 2, 0, 4, 0, 0, 0, 0, 31, 2483, 1188, 878, 590, 274, 205, 185, 118, 72, 90, 140, 73, 106, 147, 94, 108, 92, 18], name: 'Incident only', stackgroup: 'one',
+       fillcolor: 'rgba(76,114,176,0.7)', line: {width: 0},
+       hovertemplate: '<b>Incident only</b>: %{y}<extra></extra>' },
+    { x: dates, y: [65, 83, 94, 115, 117, 76, 75, 66, 62, 63, 417, 371, 309, 245, 200, 71, 193, 107, 133, 107, 66, 74, 127, 97, 99, 97, 104, 66], name: 'Trans only', stackgroup: 'one',
+       fillcolor: 'rgba(221,132,82,0.7)', line: {width: 0},
+       hovertemplate: '<b>Trans only</b>: %{y}<extra></extra>' },
+    { x: dates, y: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 202, 138, 120, 60, 41, 7, 9, 1, 8, 2, 8, 5, 5, 5, 0, 2, 1, 0], name: 'Both', stackgroup: 'one',
+       fillcolor: 'rgba(196,78,82,0.7)', line: {width: 0},
+       hovertemplate: '<b>Both</b>: %{y}<extra></extra>' },
+  ], {
+    ...darkLayout,
+    hovermode: 'x unified',
+    legend: { orientation: 'h', y: 1.08, font: { size: 13 } },
+    yaxis: { ...darkLayout.yaxis, title: 'Posts per day' },
+    shapes: [{ type: 'line', x0: shooting, x1: shooting, y0: 0, y1: 1, yref: 'paper',
+               line: { dash: 'dash', color: '#f1f5f9', width: 1 }, opacity: 0.5 }],
+    annotations: [{ x: shooting, y: 1, yref: 'paper', text: 'Shooting', showarrow: false,
+                     font: { size: 11, color: '#94a3b8' }, yanchor: 'bottom' }],
+  }, plotlyConfig);
+}
+
+// ── Fig 2: Maintype horizontal bars ─────────────────────────────────────────
+function initFig2() {
+  const labels = ["government_organization", "civil_society_organization", "politician", "news_outlet", "influencer"];
+  Plotly.newPlot('fig2', [
+    { y: labels, x: [80, 232, 1364, 3108, 2108], name: 'Incident only', type: 'bar', orientation: 'h',
+       marker: { color: 'rgba(76,114,176,0.7)' },
+       hovertemplate: '<b>%{y}</b><br>Incident: %{x}<extra></extra>' },
+    { y: labels, x: [15, 121, 51, 385, 2374], name: 'Trans only', type: 'bar', orientation: 'h',
+       marker: { color: 'rgba(221,132,82,0.7)' },
+       hovertemplate: '<b>%{y}</b><br>Trans: %{x}<extra></extra>' },
+    { y: labels, x: [0, 18, 17, 140, 439], name: 'Both', type: 'bar', orientation: 'h',
+       marker: { color: 'rgba(196,78,82,0.7)' },
+       hovertemplate: '<b>%{y}</b><br>Both: %{x}<extra></extra>' },
+  ], {
+    ...darkLayout,
+    barmode: 'stack',
+    legend: { orientation: 'h', y: 1.08, font: { size: 13 } },
+    xaxis: { ...darkLayout.xaxis, title: 'Number of posts' },
+    margin: { ...darkLayout.margin, l: 180 },
+    annotations: [{ x: 0.5, y: -0.12, xref: 'paper', yref: 'paper',
+                     text: '<i>Feb 10–28, 2026</i>', showarrow: false,
+                     font: { size: 12, color: '#64748b' } }],
+  }, plotlyConfig);
+}
+
+// ── Fig 3: Rhetoric trends (likes, dual panel) ─────────────────────────────
+function initFig3() {
+  const dates = ["2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04", "2026-02-05", "2026-02-06", "2026-02-07", "2026-02-08", "2026-02-09", "2026-02-10", "2026-02-11", "2026-02-12", "2026-02-13", "2026-02-14", "2026-02-15", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", "2026-02-21", "2026-02-22", "2026-02-23", "2026-02-24", "2026-02-25", "2026-02-26", "2026-02-27", "2026-02-28"];
+  const trends = {"ideology_framing": [3967.5, 3830.0, 6146.7, 5591.3, 4517.3, 3162.7, 3660.0, 3684.0, 4043.7, 10822.0, 21691.3, 23893.7, 20343.0, 25240.0, 21864.3, 18863.7, 7289.3, 18775.0, 27080.3, 32724.0, 20986.0, 15708.3, 7371.3, 8219.0, 7581.3, 10072.7, 8883.0, 7737.5], "conspiracy": [21612.0, 15870.0, 17695.0, 5337.0, 4096.7, 703.0, 334.3, 225.3, 165.7, 8014.3, 13369.0, 20898.7, 19242.0, 17321.0, 10558.0, 8027.3, 5606.0, 9666.3, 11124.3, 13510.3, 8715.0, 4005.0, 1252.0, 1958.0, 2857.0, 5992.3, 6440.0, 7641.5], "mockery": [669.5, 542.3, 860.7, 1404.0, 1308.0, 914.0, 1212.7, 1212.7, 3546.7, 3889.3, 32757.3, 36720.0, 35740.3, 19643.7, 13468.0, 13438.0, 12682.3, 19202.7, 25309.0, 20198.3, 14880.3, 11806.0, 14314.0, 13001.0, 12573.3, 3488.3, 3860.3, 1114.0], "violence_association": [17939.5, 11959.7, 11959.7, 0.0, 82.7, 82.7, 82.7, 188.7, 188.7, 38638.3, 67063.7, 85378.0, 48977.3, 35293.7, 17263.0, 20541.3, 5611.0, 6736.3, 1409.0, 3040.3, 1937.3, 2051.7, 9132.7, 8826.7, 12851.3, 7111.0, 7775.3, 5454.5], "identity_denial": [579.0, 386.0, 411.3, 1269.3, 1269.3, 1819.3, 1101.7, 4006.0, 9897.7, 44217.7, 65669.3, 72275.3, 38299.3, 28882.3, 15910.3, 18329.3, 5030.7, 9778.3, 8981.0, 9591.7, 5593.7, 4790.7, 3072.0, 3395.3, 7946.3, 7414.0, 6240.0, 0.0], "child_protection": [20822.5, 14729.7, 18999.3, 6237.0, 5582.0, 688.7, 712.0, 519.0, 932.0, 5484.7, 10317.7, 23582.0, 21817.7, 20972.0, 8931.7, 6806.7, 4438.3, 5738.3, 9984.7, 10018.3, 7139.7, 2400.3, 1359.0, 2422.0, 3248.7, 3735.7, 2649.0, 1699.5], "other": [21383.5, 15284.3, 19212.7, 7454.0, 6701.0, 3959.7, 3577.0, 3490.0, 1506.7, 41790.3, 53484.3, 73718.7, 34775.7, 39581.7, 20983.0, 21596.7, 17145.7, 22231.3, 24790.7, 19766.3, 13542.0, 10598.3, 12903.7, 13286.0, 18895.0, 12059.0, 10850.7, 4150.0]};
+  const catLabels = {"ideology_framing": "Ideology Framing", "conspiracy": "Conspiracy", "mockery": "Mockery", "violence_association": "Violence Association", "identity_denial": "Identity Denial", "child_protection": "Child Protection"};
+  const colors = {"ideology_framing": "#e74c3c", "conspiracy": "#3498db", "mockery": "#2ecc71", "violence_association": "#9b59b6", "identity_denial": "#f39c12", "child_protection": "#1abc9c", "other": "#95a5a6"};
+  const totalLikes = [26257, 47182, 10471, 19871, 40150, 9605, 10963, 21015, 14618, 27039, 203232, 131867, 115445, 91049, 64877, 8802, 26949, 58314, 46313, 63486, 37492, 52031, 17583, 68959, 9273, 53172, 18086, 5240];
+  const antiLikes = [5565, 42120, 5898, 16319, 5694, 998, 9170, 4526, 9051, 20687, 137959, 119716, 83189, 20668, 55023, 6934, 19986, 45543, 43567, 38720, 34924, 7323, 13430, 32808, 6669, 29472, 13475, 3771];
+  const top5 = {"2026-02-01": [{"seed": "Mark Slapinski", "likes": 17649, "text": "I am a Conservative. And I have some advice for other Conservatives:  Shut the fuck up about trans people.   The obsession with this tiny minority of people is not winning anybody over."}, {"seed": "Chris Elston", "likes": 2375, "text": "Transgender ideology is pushed by very dark, twisted, and evil people.  In a graphic email sent to Epstein in 2018-years after Epstein had been sent to jail for soliciting sex from minors, evoluti"}, {"seed": "The Serfs", "likes": 1501, "text": "There's not a single trans person in the Epstein files who wasn't a victim.  Every 'they're coming for your kids' transphobic pundit was actively protecting the most documented pedophile ring since"}, {"seed": "Maxime Bernier", "likes": 1031, "text": "That's why I call them FAKE CONSERVATIVES! They subscribe to radical far-left ideology. They don't protect children. They don't defend Canadian family values! See our policy on gender ideology her"}, {"seed": "Chris Elston", "likes": 810, "text": "Conservative MP @KronisTamara worked as advocacy director for Egale Canada, Canada\u2019s national LGBTQ+ rights organization.  It all makes sense now.   The fox is in the henhouse."}], "2026-02-02": [{"seed": "Liz Churchill", "likes": 35879, "text": "\u201cPresident Trump referred to Maine\u2019s Governor \u2018Janet Mills\u2019 as a \u2018He\u2019 or \u2018Him\u2019 at least 6 times during a phone call\u2026\u201d  Janet Mills, the Governor of Maine, who supports making Transgender Children\u2026"}, {"seed": "Decolonize Myself", "likes": 3622, "text": "REPOST @palfest @al.shabaka  'People in the region have always struggled with identifying as LGBT or as queer because they understand that this is how empire co-opts them.' Speaking to Ta-Nehisi"}, {"seed": "Tristin Hopper", "likes": 1263, "text": "Two (2) rec centres near me had cases of dudes loitering naked in the women's change rooms and leering at patrons, some of whom were minors. The law, amended in the service of trans rights, is on"}, {"seed": "Rob_ThaBuilder", "likes": 1086, "text": "So much of trans activism is simply pushing back against arguments that literally no one is making.  The only ppl making these arguments are the trans activists themselves.   The only definition f"}, {"seed": "Maxime Bernier", "likes": 1015, "text": "The groundhog predicts another six years of confusion over who of the Liberals or Conservatives is more supportive of radical gender ideology and child mutilation. https://t.co/KJbRR8XbgP"}], "2026-02-03": [{"seed": "Cult MTL", "likes": 3493, "text": "Canada, the Netherlands and France have been named among the safest countries in the world for LGBT travellers. https://t.co/74GW6A5xWV"}, {"seed": "Chris Elston", "likes": 923, "text": "People overwhelmingly want gender ideology out of every aspect of our society.  Will our politicians ever listen?  This would be the biggest winning issue for Conservatives. There is no better way"}, {"seed": "Virginia Johnson", "likes": 909, "text": "Fake News CNN lets leftist activist Chris Kluwe claim that the US is on the path toward Nazi Germany and that Trump is trying to 'erase trans people.'  This is the exact type of rhetoric that lea"}, {"seed": "Jack", "likes": 895, "text": "EPSTEIN was pitching \u201ctrans children\u201d and how to normalize it.   Weird how Alberta\u2019s MSM like CTV, Global and CBC are SILENT on this. Yet they do everything they can to demonize the UCP for steppi"}, {"seed": "Jim McMurtry", "likes": 770, "text": "How could doctors ever think that chopping off a girl\u2019s breasts was right?  How could schools send children down a path toward trans surgery?  Every Pied Piper who led children away from their par"}], "2026-02-04": [{"seed": "Liz Churchill", "likes": 5199, "text": "Beyond evil.   The Transgender Madness was mentioned in the Epstein Files.   Hollywood Stars have a much higher incidence of having transgender children.   \u201cBTW we are now pushing the intervention"}, {"seed": "Virginia Johnson", "likes": 4165, "text": "LEGO Ninjago, a tv show for CHILDREN, features a character promoting the child mutilation flag.  They want to push radical transgenderism on your children."}, {"seed": "Genevieve Gluck", "likes": 3363, "text": "EpsteinFiles Jeffrey Epstein funded research into transsexual medical experiments on children.  The #EpsteinFiles have confirmed that the medical 'transitioning' of children fulfills sadistic sexua"}, {"seed": "Samira Mohyeddin", "likes": 1904, "text": "\ud83d\udccd What I think bothers some in the Iranian community most is that my brain has the capacity to see both the murderous machinery of the IRGC and the murderous machinery of the IDF.   \ud83d\udccd I have enou"}, {"seed": "Genevieve Gluck", "likes": 1341, "text": "EpsteinFiles The Trivers email in the #EpsteinFiles, in which he expresses a sexual motivation for creating transsexual children, has shocked many people.  However, the trans / pedophilia connectio"}], "2026-02-05": [{"seed": "Etalk", "likes": 19110, "text": "Mr. Prime Minister, Alexander Skarsg\u00e5rd is WAITING! \ud83d\udc40  Alexander Skarsg\u00e5rd and Harry Melling star in the new film, \u2018Pillion,\u2019 and while chatting, Tyrone had to mention that along with \u2018Pillion\u2019 ("}, {"seed": "The University of British Columbia", "likes": 7363, "text": "Heated Rivalry has been celebrated as a story that \u201ccould only be made in Canada.\u201d  But what kind of Canada does it imagine\u2014and who gets to feel fully at home within it?   In this Q&A, UBC expert"}, {"seed": "Jonathan Kay", "likes": 2645, "text": "remember when @TorontoStar &amp; @bruce_arthur tried to gaslight the women pointing out that Khelif was a man beating the crap out of women?  remember when he called them psychotic \u201cright-wing' hy"}, {"seed": "Etalk", "likes": 1963, "text": "'Pillion' star Alexander Skarsg\u00e5rd is waiting for his Hudson Williams moment Mr. Prime Minister, Alexander Skarsg\u00e5rd is WAITING! \ud83d\udc40  Alexander Skarsg\u00e5rd and Harry Melling star in the new film, \u2018Pillion"}, {"seed": "Mark Slapinski", "likes": 1667, "text": "My name is Mark Slapinski. Lately I've been mending bridges with the Left. We can put politics aside and agree that Maple MAGA, Alberta Separatists, Putin Lovers, and Anti-trans Bigots have no pla"}], "2026-02-06": [{"seed": "The Serfs", "likes": 3701, "text": "Isn't it super random that all of the 'anti-woke' cancel culture academics who all leaned into transphobia and race science later in their careers all seem to be connected through Jeffrey Epstein?"}, {"seed": "The Serfs", "likes": 2624, "text": "Isn't it super random that all of the 'anti-woke' cancel culture academics who all leaned into transphobia and race science later in their careers all seem to be connected through Jeffrey Epstein?"}, {"seed": "J Hunter", "likes": 1098, "text": "I cant believe oil production is up more than 40% since Liberals were elected in 2015,  built the TMX pipeline, LNG pipeline, and will expand the Trans Mountain pipeline starting this summer.  Tru"}, {"seed": "TR6Amigo", "likes": 417, "text": "Every single politician in the HOC in \ud83c\udde8\ud83c\udde6 told you to 'Get Vaccinated.' They also told your children against your will they could trans and take puberty blockers.  Every one of them committed crime"}, {"seed": "Gad Saad", "likes": 372, "text": "I'm the wife.  My biological female spouse identifies as a man so he is my husband.  Every single person in my family is trans including our kids."}], "2026-02-07": [{"seed": "Chris Elston", "likes": 7002, "text": "Good for Italy.  FYI, the same drug to chemically castrate these pedophiles is given to confused children caught up in the trans craze. https://t.co/wlu1V87YPE"}, {"seed": "Rob_ThaBuilder", "likes": 1649, "text": "How interesting that the trans identified female athletes always compete in the female category.  Almost like they know it would place them at a hige disadvantage to compete with the men.  And if"}, {"seed": "Richard", "likes": 679, "text": "Hey. You.  Anti-Zionist.    You want to hate Israel?  Ok.  You\u2019re allowed.  It\u2019s a beautiful country, extremely innovative and they contribute quite a lot to our planet, but that\u2019s ok.  You want t"}, {"seed": "The Serfs", "likes": 612, "text": "The Epstein files have confirmed what the left have been pointing out for years: white supremacist and patriarchal hierarchies built on capitalist exploitation lead to gross inequality and monsters."}, {"seed": "Janis Irwin", "likes": 257, "text": "I was so excited to meet @janis.irwin of the NDP today. I got to tell her I was opening a queer and inclusive hair salon today. I am such a big fan of Janis, she does so much for the queer and tr"}], "2026-02-08": [{"seed": "Decolonize Myself", "likes": 15714, "text": "A sound [anti]politic informs a sound praxis.  \u2022 Repost from @the_scarlet_faguette \u2022 It\u2019s time we see clearly. The Democrats are not good guys getting blocked from making progressive reform. Libe"}, {"seed": "Rob_ThaBuilder", "likes": 1531, "text": "This young man laments how a female co worker of his is 'nothing but lovely', says its the 'worst kind of misgendering'.  Later in response, he makes clear he doesnt understand why she would act l"}, {"seed": "Rob_ThaBuilder", "likes": 807, "text": "When a girl who looks like this gets to talk about the struggles of being part of a 'marginalized community' and doesnt get laughed out of the room, all of a sudden it makes perfect sense why the"}, {"seed": "Genevieve Gluck", "likes": 684, "text": "This man wants to halt children's puberty. He wants to chemically castrate kids.  By 'trans eradication' he means protecting children.  It's time everyone stopped taking this hyperbole seriously."}, {"seed": "Rob Logan", "likes": 500, "text": "My Sunday Rant !  WARNING: If you are triggered easily, meaning Liberal, NDP, Bloc, Green, PPC, (Known as the UNIPARTY) stop reading this post it is about truths & facts !  Blast off\ud83d\ude80  Well here w"}], "2026-02-09": [{"seed": "Wide Awake Media", "likes": 8080, "text": "'Is it transphobic to say only women have a cervix?'   Keir Starmer: 'It is something that shouldn't be said. It is not right.' https://t.co/t2hm472cmj"}, {"seed": "National Film Board", "likes": 1421, "text": "\ud83c\udf0f\u2728 The world will know Jackie Shane!  We're excited to announce that Michael Mabbott and Lucah Rosenberg-Lee's award-winning documentary, ANY OTHER WAY: THE JACKIE SHANE STORY, is now available o"}, {"seed": "Gad Saad", "likes": 1393, "text": "QueersForPalestine #QueersForPalestine"}, {"seed": "Martine Delveau", "likes": 652, "text": "Prot\u00e9ger l\u2019amour queer \ud83d\udc9c\ud83e\udde1\u2764\ufe0f  Aux c\u00f4t\u00e9s de L\u00e9a Clermont-Dion et Ma\u00efka Sondarjee, Martine Delvaux revient sur la gen\u00e8se de son livre \u00ab Il faut beaucoup aimer les femmes qui pleurent \u00bb (H\u00e9liotrope),"}, {"seed": "National Post", "likes": 566, "text": "Transgender teen killer loses bid to stay in Ontario women's prison after threatening inmates and staff."}], "2026-02-10": [{"seed": "Rob_ThaBuilder", "likes": 12284, "text": "And absolutely nobody has a problem with this,  because its a female competing in the womens category. Nobody wants to 'ban trans ppl from sport', we simply dont want men competing against women."}, {"seed": "Chris Elston", "likes": 7099, "text": "He\u2019s not transgender. He\u2019s just a man.   Nobody is transgender. They\u2019re not beyond gender. They\u2019re not in between gender. They\u2019re not across gender.  They have a sex. That\u2019s it.  We must stop usin"}, {"seed": "Syrus Marcus Ware", "likes": 4200, "text": "We are the ones we have been waiting for (That\u2019s the good news). There is a concerted plan to scale up the ever present white supremacy and hate fuelled violence here \u2014yes here north of the medic"}, {"seed": "Chris Elston", "likes": 1239, "text": "This is the true story of coercive abuse masked as \u201cscience,\u201d which helped launch modern gender identity theory.  It\u2019s 1966. Bruce and Brian Reimer, healthy identical twins from Winnipeg, Canada,"}, {"seed": "Fae Johnstone", "likes": 808, "text": "Corporate betrayal. Government funding cuts and austerity. A cost of living crisis. Rising hate and political attacks. This is the perfect storm, putting immense pressure on local 2SLGBTQIA+ orga"}], "2026-02-11": [{"seed": "David Parker", "likes": 73361, "text": "The trans kid who murdered over ten people, and injured more, also killed his mother and younger brother. Turns out, supporting your children in their sexual delusions will probably get you killed"}, {"seed": "Celeste Trianon", "likes": 19568, "text": "we stand with Tumbler Ridge.  EDIT (6:40 AM MT, 12-Feb-2026): I have reasons to believe that the Twitter profile widely attributed to the shooter is a fake profile created to deceive the public."}, {"seed": "Keean Bexte", "likes": 14573, "text": "Does this mean every trans person is a school shooter? No.   Does this mean that maybe we should be treating mental illness instead of glorifying it? Yes."}, {"seed": "Terrill Tailfeathers", "likes": 13165, "text": "Please protect all the trans people in your lives in Canada right now."}, {"seed": "Radio-Canada Info", "likes": 9702, "text": "MISE \u00c0 JOUR : Les autorit\u00e9s ont r\u00e9vis\u00e9 le nombre de d\u00e9c\u00e8s \u00e0 la baisse, il s\u2019agit de 8 personnes et de la pr\u00e9sum\u00e9e tireuse. La victime qui a \u00e9t\u00e9 transport\u00e9e \u00e0 l\u2019h\u00f4pital est toujours en vie. On en sait"}], "2026-02-12": [{"seed": "Kat Kanada", "likes": 29940, "text": "Another example of how trans people are not mentally ill or extremely violent at all.   They're totally sane and well-adjusted individuals &amp; you need to stop being paranoid about them being da"}, {"seed": "Kat Kanada", "likes": 28818, "text": "On another episode of 'Trans People Are Not Mentally Ill or Violent.'   A trans student (male) slams a female student to the ground and repeatedly punches her in the head.   Don't hate by saying y"}, {"seed": "Rebel News", "likes": 10893, "text": "RCMP, media, government all lying about horrific BC shooting: Ezra Levant \u25bahttps://RebelNewsPlus.com | Watch new episodes every weeknight! Canada's police, media outlets and government are all trying"}, {"seed": "Chris Elston", "likes": 6475, "text": "Jennifer Strang \u2014 the deceased mom whose son murdered her and his step-brother and several school children \u2014 unfortunately never learned the lesson that it is damaging to affirm a delusion and to"}, {"seed": "Chris Elston", "likes": 6377, "text": "The EU has just adopted a resolution that trans women are women.   Translating from crazy to English, that means they have decided that men are women.  https://t.co/8RiEj6oCuZ"}], "2026-02-13": [{"seed": "Liz Churchill", "likes": 28816, "text": "This is one of the craziest Transgender stories you will ever hear.   \u201cA man r@ped a 3-month old and drowned a 3 year old. He was sent to prison\u2026becomes a Transgender\u2026the Gov\u2019t paid for his breast"}, {"seed": "Tyson Hockley", "likes": 9860, "text": "I was almost BANNED from my high school Prom for being a conservative \ud83d\ude2d  One of the students who \u201ccomplained\u201d about me was a transgender who I only ever treated with respect. \ud83c\udff3\ufe0f\u200d\u26a7\ufe0f https://t.co/MM"}, {"seed": "Kat Kanada", "likes": 9551, "text": "Trans woman (biological male by the name Jonathan Yaniv) calls Rebel News reporter 'n***er' multiple times and threatens her child.   Totally sane and not at all mentally ill behaviour. If you thi"}, {"seed": "Liz Churchill", "likes": 9155, "text": "Kylie Younge will be known as a Canadian Hero who shielded her classmates from a Transgender Mass Murderer.   She stood in the path against a Monster who was fed propaganda, anti-psychcotics, pube"}, {"seed": "Bruce Barrett", "likes": 8245, "text": "Alice Michael Attwood travels around BC and Alberta in his van after he stabbed his 2 young children in the neck.  He should be in jail but he\u2019s trans and this is Canada.   https://t.co/kLsoMjqJyL"}], "2026-02-14": [{"seed": "Kristin Raworth", "likes": 17607, "text": "Trans people didn\u2019t rape me when I was 17. Trans people didn\u2019t beat me in my romantic relationships. Trans people didn\u2019t assault me at 33.  White straight cis men did. If you want to talk about th"}, {"seed": "George Rivard", "likes": 11787, "text": "telling on yourself #canada #transrightsarehumanrights #lgbtq #tumblerridge"}, {"seed": "Tyson Hockley", "likes": 9558, "text": "Transgender classmate tried forming a hate group against me in class. \ud83c\udff3\ufe0f\u200d\u26a7\ufe0f   I was never anything but respectful to this person. \ud83d\ude2d https://t.co/3v2eWkIKlE"}, {"seed": "Professor Neil", "likes": 8441, "text": "No, this is not the time to start asking questions about \u201ctran$gender ideology\u201d and what happened in Tumbler Ridge. Or anywhere else. #canada"}, {"seed": "Aidan Simardone", "likes": 8220, "text": "Homophobia was brought from Europe through colonialism  LGBT liberation is decolonization"}], "2026-02-15": [{"seed": "Chris Elston", "likes": 37346, "text": "A trans-identified man named Jessica Simpson, formerly Jonathan Yaniv, threatened to shoot me!  I wasn\u2019t particularly fond of that, so I responded by gifting him a criminal record for uttering thr"}, {"seed": "Aidan Simardone", "likes": 6442, "text": "Up for LGBT liberation, down with empire . . . . . . . . . . . #liberation #anticapitalism #antiimperialism #colonialism #imperialism"}, {"seed": "Chris Elston", "likes": 5202, "text": "This trans-identified man, Alice Michael Attwood, stabbed his 8-year-old daughter in the throat, severing her esophagus, and stabbed his 7-year-old son.  He was not put in jail, or institutionaliz"}, {"seed": "Terry Newman", "likes": 3473, "text": "I was born in 79. Growing up, I had the sense that women in society were doing amazing. We could do anything we wanted to. No one doubted what a woman was. Fast-forward to gender ideology, now we'"}, {"seed": "Chris Elston", "likes": 3208, "text": "The UK is treating nursery-age children who believe they are transgender.  The National Health Service was previously set to introduce a minimum age of seven for children to be seen by its special"}], "2026-02-16": [{"seed": "Chris Elston", "likes": 4019, "text": "I\u2019m on the streets of Vancouver, working to stop the madness of child transition.  These two fantastic young women made my day worthwhile.   One thought it made sense to stop a girl\u2019s development"}, {"seed": "Jason Kenney", "likes": 884, "text": "This\ud83d\udc47is great, but before getting too excited,  recall that this is essentially what the Harper government sought to do for Canada through the Canada-Europe Trade Agreement, the Trans Pacific Part"}, {"seed": "Jonathan Harvey", "likes": 869, "text": "58% of trans patients have psychiatric diagnoses vs. 13.6% in the general population.   \u201cTransgender people are 3.4 to 3.9 times more likely to be prescribed anti-depressants.\u201d  We know what\u2019s ha"}, {"seed": "Bruce McGonigal", "likes": 707, "text": "I am going to take some time off social media for a week or so, just to refocus.  The massacre of little children in Tumbler Ridge and the lack of accountability from our politicians, has made me"}, {"seed": "QUB Radio", "likes": 366, "text": "\u00abUne femme transgenre poignarde son gar\u00e7on et tranche la gorge de sa fille\u00bb, raconte Maxime Deland La prison pour avoir voulu coucher avec un ado. La petite skieuse victime d\u2019un accident de remonte-pe"}], "2026-02-17": [{"seed": "Xtra Magazine", "likes": 4087, "text": "Last week, Swedish skier Elis Lundholm made history as the first openly trans athlete to compete in the Winter Olympics when he took to the slopes at the 2026 Milano Cortina Winter Games.  But NBC is"}, {"seed": "Joe Anidjar", "likes": 3547, "text": "This is more than just a pattern guys.  Gender Dysphoria is a mental illness and these people need help.  Everyone who pushes and supports this is complicit in this. We need to stop pushing this"}, {"seed": "Juno News", "likes": 3307, "text": "More TRANS violence + meet Canada\u2019s new top trade negotiator EDITORS NOTE: Attwood admitted to committing the 'heinous act' on social media but still awaits sentencing.  On today\u2019s episode of the Cand"}, {"seed": "Kat Kanada", "likes": 2198, "text": "Police confirm shooter was a male named Robert but went by \u201cRoberta.\u201d  How many deaths before we\u2019re allowed to talk about transgenderism as a mental illness?   I don\u2019t care if you know a \u201csane\u201d on"}, {"seed": "Jonathan Harvey", "likes": 2149, "text": "Trans individuals are wildly overrepresented in non-gang related mass shootings.  10-25x higher than expected per capita, while focusing on ideologically driven incidents.   A study found SSRI us"}], "2026-02-18": [{"seed": "Marty", "likes": 31314, "text": "Donald Trump threatening to take away gun rights from Trans people is brilliant.  He now has democrats defending gun rights."}, {"seed": "QUB Radio", "likes": 6128, "text": "Non binaire : un salon de coiffure a d\u00fb payer 500 dollars d'amende... \u2702\ufe0f #nonbinaire #binaire #genre #transition #identit\u00e9 #lgbtq #coiffeur #coiffure #argent #amende #controverse #pourtoi #tiktokqueb"}, {"seed": "Decolonize Myself", "likes": 5340, "text": "Repost @indigenous.tv   One year ago, Emily Pike - a 14-year-old from the San Carlos Apache Tribe - was found murdered in Arizona. Her case remains unsolved.  Emily was last seen alive in Mesa, #"}, {"seed": "Meghan Murphy", "likes": 4332, "text": "For the past 10+ years, saying the most basic, obvious things, such as 'men aren't women,' would get you tarred as a dangerous, hateful extremist who needed to be banned from society and the inter"}, {"seed": "Rebel News", "likes": 4020, "text": "Unhinged Trans Activist Gets a REALITY CHECK Rebel News: Telling the other side of the story. https://www.RebelNews.com for more great Rebel content.  Unlike almost all of our mainstream media competi"}], "2026-02-19": [{"seed": "Ryan Gerritsen", "likes": 10126, "text": "In Canada a hair salon was fined $500 for not having \u201cnon binary\u201d on their booking site. It caused the person who made the complaint spiral deeper into a metal health crisis who then became unable"}, {"seed": "Chris Elston", "likes": 9787, "text": "\ud83d\udea8 BREAKING: Barry Neufeld, a former school trustee who opposed gender ideology in schools, has been ordered to pay $750,000 to the Chilliwack Teacher\u2019s Assocation.  The BC Human Rights Tribunal li"}, {"seed": "Tara Armstrong", "likes": 8384, "text": "Fathers are often powerless to stop ex-spouses from transitioning their kids against their will.  Today I proposed a bill to classify gender transitions as a form of child abuse in custody proceed"}, {"seed": "Alexa Lavoie", "likes": 4286, "text": "\ud83d\udca5\ud83d\udca5The \u201cnon-binary\u201d individual who filed a complaint against a hair salon for offering only men\u2019s and women\u2019s haircuts appears to have a long history of complaint activism \u2014 even if she claims othe"}, {"seed": "Alexa Lavoie", "likes": 3270, "text": "The bald \u201cnon-binary\u201d individual who filed a complaint against a hair salon through the Human Rights Tribunal for not offering options beyond \u201cmen\u2019s\u201d and \u201cwomen\u2019s\u201d haircuts appears to be working f"}], "2026-02-20": [{"seed": "Rachel Notley", "likes": 23045, "text": "First they came for the trans people. Then they came for the unionized workers. Next it was judges. Now it\u2019s immigrants. If you think that you or someone you love won\u2019t be next, you\u2019re sorely mis"}, {"seed": "Mario Zelaya", "likes": 14600, "text": "A non-binary Individual, went to book a haircut and was only presented with limited options that didn\u2019t represent her. So the Salon, created the option for them, offered three free cuts, but that was"}, {"seed": "Lauren Chen", "likes": 8956, "text": "Ending transgender youth surgeries is good, but I must remind you, progressives denied they were even happening.  So they were lying to you.  Don't forget that."}, {"seed": "Harman Bhangu", "likes": 4603, "text": "Enough is enough. What is happening in our schools is not \u201cinclusion.\u201d It is ideological capture. It is the state telling parents to step aside while activists experiment on their children\u2019s moral"}, {"seed": "Mario Zelaya", "likes": 1911, "text": "\ud83d\udea8 INSANE STORY: A non-binary individual went to book a haircut.   The salon\u2019s online options didn\u2019t represent them.  So the salon created a new option for them.  And offered 3 free haircuts.  It w"}], "2026-02-21": [{"seed": "Bruce Barrett", "likes": 17702, "text": "The funeral planned in Tumbler Ridge for 12-year-old Kylie Smith, killed in last week's school shooting, has been canceled due to legitimate threats against her family, according to local outlet T"}, {"seed": "The Post Millennial", "likes": 4823, "text": "Funeral for 12-year-old victim of trans Tumbler Ridge shooter canceled over threats against family  https://t.co/sCugYeQpk8"}, {"seed": "Ezra Levant", "likes": 3711, "text": "Why are you blaming OpenAI? Your woke RCMP went to the home of that murderer dozens of times and did nothing.  And for the same reason OpenAI did nothing: they were afraid of being called transpho"}, {"seed": "Melanie In Saskatchewan", "likes": 2128, "text": "If you\u2019ve felt something shifting in this country but couldn\u2019t quite put words to it, this is my attempt. \u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022  Today I am 51. Today my youngest daughter turns 11. And today marks six mo"}, {"seed": "Marc Nixon", "likes": 1659, "text": "$750,000  That\u2019s the price in \ud83c\udde8\ud83c\udde6 for saying biological sex is real  Former Chilliwack trustee Barry Neufeld just got financially crushed for opposing gender ideology in schools  Disagree with the"}], "2026-02-22": [{"seed": "CBC News", "likes": 38200, "text": "If you were holding your breath waiting for something bad to happen while watching Heated Rivalry, you were not alone. Speaking with The National's Ian Hanomansing, creator Jacob Tierney explained th"}, {"seed": "Amy Eileen Hamm", "likes": 2498, "text": "\u201cEspecially 2SLGBTQIA+\u201d\u2026  Excuse me? What? Why is this relevant?"}, {"seed": "Genevieve Gluck", "likes": 1610, "text": "Canadian taxpayers paid for a training video targeting nurses at Mount Sinai Hospital in Toronto.  Trans-identified male and BDSM fetishist Nina Arsenault was invited to show women how to respond"}, {"seed": "", "likes": 1576, "text": "Is NDP Heather McPherson saying Canadian 2SLGBTQIA+ lives are more important than Straight Canadians lives. What a divisive way to make a post in a crisis in Mexico. https://t.co/53p11Vu5ro"}, {"seed": "Rebel News", "likes": 1377, "text": "B.C. Human Rights Tribunal orders elected trustee to pay $750,000 over transgender remarks www.RebelNewsPlus.com | The tribunal\u2019s ruling raises questions about the limits of free expression and how fa"}], "2026-02-23": [{"seed": "Amy Eileen Hamm", "likes": 3270, "text": "Let us all blaspheme the cult of gender together!   Trans women are men. Gender identity is metaphysical nonsense. No one can prove that \u201cgender identity\u201d exists. It\u2019s unfalsifiable. And it\u2019s stup"}, {"seed": "Juno News", "likes": 2094, "text": "Canadians TRAPPED in a warzone + BC man fined $750k for stating true facts On today\u2019s episode of the Candice Malcolm Show News Update, Candice details the shocking scenes from Puerto Vallarta yesterda"}, {"seed": "Jonathan Kay", "likes": 1694, "text": "For non-Canadians who are new to this clown show:  (1) this is not a fringe student activist, but rather a prominent contender for leadership of the NDP, a left wing political party  (2) \u201c2SLGBTQI"}, {"seed": "Kelowna Now", "likes": 1382, "text": "Canada could become a nightmare, BoC governor says Headlines for today's show  Canada could become a nightmare, BoC governor says  Cartel violence erupts in Mexico, NDP MP tweets about LGBT community"}, {"seed": "The Serfs", "likes": 1262, "text": "The $750,000 was mostly legal fees because Barry Neufeld dragged it to the supreme court. It had nothing to do with gender ideology - he falsely called a teacher a pedophile without any evidence a"}], "2026-02-24": [{"seed": "Decolonize Myself", "likes": 28029, "text": "Trans people in federal prisons are forcibly undergoing detransition and conversion therapy experiments by the Federal Bureau of Prisons. Thank you @mamamephistopheles for this in-depth reporting"}, {"seed": "Lauren Chen", "likes": 25283, "text": "'Trans women' have killed more people than ICE agents this year.  Are you all going to talk about that or nah?"}, {"seed": "The Serfs", "likes": 5859, "text": "Not great when your democratic presidential hopeful is already getting praise from the far right for abandoning trans people https://t.co/1bH3HrJLXi"}, {"seed": "Amy Eileen Hamm", "likes": 1981, "text": "There are many disturbing lines within the Neufeld ruling.   Among the worst is this small detail: the BC HRT assigned a gender identity and pronouns to Barry\u2019s witnesses.   They forced their beli"}, {"seed": "Ezra Levant", "likes": 1649, "text": "brave This is called projection.  Ottawa's woke Mounties visited the home of the killer countless times but were too afraid to arrest him, for fear of being called transphobic.  No accountability t"}], "2026-02-25": [{"seed": "Kat Kanada", "likes": 3364, "text": "There's no such thing as gender. There's only the binary biology of sex.   To say otherwise, is to proclaim utter lies.   Gender ideology belongs in the dustbin of history.   The butchering of you"}, {"seed": "National Post", "likes": 1700, "text": "British comedy elder John Cleese has announced that he will be steering clear of British Columbia on an upcoming Canadian tour, owing to fears that he will be prosecuted for non-adherence to gende"}, {"seed": "Pete Fry", "likes": 1104, "text": "It\u2019s important to come together against bullying in the workplace and in public life, today and every day.   The blatant disinformation spread by ABC Councillor Lenny Zhou caused real harm.   It"}, {"seed": "The Serfs", "likes": 513, "text": "Because of your lie. You claimed someone had to pay $750,000 for gender ideology when it was lawyer fees for slandering a teacher and refusing to stop calling him a pedo after a court order.  John"}, {"seed": "National Post", "likes": 404, "text": "The growing backlash against woke authoritarianism A new book makes the case that across western countries in both North America and Europe, the tide is turning against so-called 'wokeism' and that th"}], "2026-02-26": [{"seed": "Celeste Trianon", "likes": 22925, "text": "For the first time in Canadian history, an elected official is suggesting to repeal every single human rights protection in a province.  All of this over being a transphobe.  I hope you realize h"}, {"seed": "Drea Humphrey", "likes": 8655, "text": "Another TEEN TRANS KILLER.  Florida teen, Julia Egler, who goes by Jasper, shot her mother and her mother\u2019s boyfriend after being misgendered by her mom. The teen admits her mother tried to meet h"}, {"seed": "Terry Newman", "likes": 6430, "text": "The first openly trans lawmaker in the US \u2014 who was hailed as a trail-blazer \u2014 has admitted to sickening child sex charges involving young kids in a daycare. https://t.co/TOZNiLuKvK"}, {"seed": "Kat Kanada", "likes": 5269, "text": "WILD EXCHANGE   Why did you say transgender care was 'medically necessary?'  Doc: I never said that.   Reads him the paragraph from his own statement where he says exactly that.   Doc: I didn't re"}, {"seed": "Tara Armstrong", "likes": 2245, "text": "The NDP enabled the Tumbler Ridge shooting by pushing gender ideology onto children and recklessly returning seized guns to a home with a history of violence.  David Eby blamed OpenAI.  I asked hi"}], "2026-02-27": [{"seed": "Liz Churchill", "likes": 7932, "text": "The \u2018Trans Ideology\u2019 was cited in the Epstein Files. The \u2018Trans Ideology\u2019 is a Psychological Operation meant to demoralize and destabilize the Nuclear Family.   REOPEN the Asylums and throw these"}, {"seed": "Gad Saad", "likes": 1775, "text": "This is because the rules of chess promote a patriarchal heteronormative mindset that erases female voices but especially female voices of color.  Don't get me going on the transphobia of chess."}, {"seed": "Jim McMurtry", "likes": 1596, "text": "BC HRT Commissioner Kasari Govender who is paid $351,847 intervened in the Neufeld case and spoke publicly that denying trans identities is hate.  Her support for a $750,000 punishment of an old w"}, {"seed": "The Serfs", "likes": 984, "text": "That's more than every trans mass shooter ever"}, {"seed": "Chris Elston", "likes": 888, "text": "@CTVMontreal Governments across the country have literally legislated gender identity ideology as an approved and funded component of our children\u2019s education, but you call that a conspiracy theor"}], "2026-02-28": [{"seed": "Ezra Levant", "likes": 1993, "text": "The Liberals are doing anything they can to shift the blame away from the woke RCMP that visited the murderer's home dozens of times but were too afraid to arrest him, for fear of being called tra"}, {"seed": "QUB Radio", "likes": 679, "text": "Isabelle n'est PLUS CAPABLE de l'homophobie ! \ud83c\udf08 #lgbtq #homophobie #orientation #blagues #malaise #violence #harc\u00e8lement #\u00e9coles #\u00e9ducation #pourtoi #tiktokquebec #tiktokqc #QUB #radio  lgbtq,orienta"}, {"seed": "Steve Guilbeault", "likes": 573, "text": "The Canadian government is fixated on two things: sexual confusion, and death.  They're so committed to the ideology of sexual confusion, that as one of the most important parts of their energy po"}, {"seed": "Bill Kieser", "likes": 523, "text": "We never hear much about Mark Carney's trans partner. It's almost like it's a secret. https://t.co/ralDO3TIsV"}, {"seed": "Rebel News Canada", "likes": 303, "text": "Jeff Evely: David Eby 'dodging the issue' amid calls to abolish B.C. Human Rights Tribunal http://RebelNews.com | On Friday\u2019s Rebel Roundtable livestream, Drea Humphrey and Alexa Lavoie were joined by"}]};
+  const shooting = '2026-02-10';
+
+  const traces = [];
+
+  // Bar traces (top panel)
+  traces.push({ x: dates, y: totalLikes, name: 'All top posts', type: 'bar',
+    marker: { color: 'rgba(189,195,199,0.4)' }, xaxis: 'x', yaxis: 'y',
+    hovertemplate: 'All: %{y:,.0f}<extra></extra>', legendgroup: 'bar_all' });
+  traces.push({ x: dates, y: antiLikes, name: 'Anti-trans', type: 'bar',
+    marker: { color: 'rgba(231,76,60,0.6)' }, xaxis: 'x', yaxis: 'y',
+    hovertemplate: 'Anti-trans: %{y:,.0f}<extra></extra>', legendgroup: 'bar_anti' });
+
+  // Trend traces (bottom panel)
+  const catOrder = ['ideology_framing','conspiracy','mockery','violence_association','identity_denial','child_protection'];
+  catOrder.forEach(cat => {
+    traces.push({ x: dates, y: trends[cat], name: catLabels[cat], type: 'scatter', mode: 'lines',
+      line: { color: colors[cat], width: 2.5 }, xaxis: 'x2', yaxis: 'y2',
+      legendgroup: cat,
+      hovertemplate: '<b>' + catLabels[cat] + '</b>: %{y:,.0f}<extra></extra>' });
+  });
+  traces.push({ x: dates, y: trends['other'], name: 'Other Anti-Trans', type: 'scatter', mode: 'lines',
+    line: { color: colors['other'], width: 2.5, dash: 'dash' }, xaxis: 'x2', yaxis: 'y2',
+    legendgroup: 'other',
+    hovertemplate: '<b>Other</b>: %{y:,.0f}<extra></extra>' });
+
+  const shapeBase = { type: 'line', y0: 0, y1: 1, line: { dash: 'dash', color: '#f1f5f9', width: 1 }, opacity: 0.4 };
+
+  Plotly.newPlot('fig3', traces, {
+    ...darkLayout,
+    height: 520,
+    barmode: 'overlay',
+    hovermode: 'x unified',
+    legend: { orientation: 'h', y: 1.06, font: { size: 11 }, tracegroupgap: 5 },
+    xaxis:  { domain: [0,1], anchor: 'y',  showticklabels: false, gridcolor: '#1e293b' },
+    yaxis:  { domain: [0.62,0.95], anchor: 'x', title: 'Likes', gridcolor: '#1e293b', zerolinecolor: '#334155' },
+    xaxis2: { domain: [0,1], anchor: 'y2', gridcolor: '#1e293b' },
+    yaxis2: { domain: [0,0.55], anchor: 'x2', title: 'Likes (3-day rolling)', gridcolor: '#1e293b', zerolinecolor: '#334155' },
+    shapes: [
+      { ...shapeBase, x0: shooting, x1: shooting, xref: 'x', yref: 'y domain' },
+      { ...shapeBase, x0: shooting, x1: shooting, xref: 'x2', yref: 'y2 domain' },
+      { ...shapeBase, x0: '2026-02-18', x1: '2026-02-18', xref: 'x2', yref: 'y2 domain' },
+      { ...shapeBase, x0: '2026-02-21', x1: '2026-02-21', xref: 'x2', yref: 'y2 domain' },
+    ],
+    annotations: [
+      { x: shooting, y: 0.97, yref: 'y2 domain', xref: 'x2', text: 'Shooting', showarrow: false, font: { size: 10, color: '#94a3b8' } },
+      { x: '2026-02-18', y: 0.97, yref: 'y2 domain', xref: 'x2', text: 'Hair Salon', showarrow: false, font: { size: 10, color: '#94a3b8' } },
+      { x: '2026-02-21', y: 0.97, yref: 'y2 domain', xref: 'x2', text: 'OpenAI Letter', showarrow: false, font: { size: 10, color: '#94a3b8' } },
+    ],
+    margin: { l: 70, r: 20, t: 40, b: 40 },
+  }, plotlyConfig);
+
+  // Hover highlight: dim other lines in trend panel
+  const fig3El = document.getElementById('fig3');
+  const trendStart = 2; // first trend trace index
+  const trendEnd = traces.length;
+
+  fig3El.on('plotly_hover', function(data) {
+    const idx = data.points[0].curveNumber;
+    if (idx < trendStart) return;
+    const update = {};
+    update['line.width'] = [];
+    update['opacity'] = [];
+    for (let i = 0; i < traces.length; i++) {
+      if (i >= trendStart) {
+        update['line.width'].push(i === idx ? 4.5 : 1);
+        update['opacity'].push(i === idx ? 1 : 0.15);
+      } else {
+        update['line.width'].push(undefined);
+        update['opacity'].push(undefined);
+      }
+    }
+    Plotly.restyle(fig3El, update);
+  });
+
+  fig3El.on('plotly_unhover', function() {
+    const update = {};
+    update['line.width'] = [];
+    update['opacity'] = [];
+    for (let i = 0; i < traces.length; i++) {
+      if (i >= trendStart) {
+        update['line.width'].push(2.5);
+        update['opacity'].push(1);
+      } else {
+        update['line.width'].push(undefined);
+        update['opacity'].push(undefined);
+      }
+    }
+    Plotly.restyle(fig3El, update);
+  });
+}
+
+// ── Fig 4: Gender ideology dot plot ─────────────────────────────────────────
+function initFig4() {
+  const items = [{"label": "30-44", "group": "Age", "pct": 32.7, "ci_lo": 24.2, "ci_hi": 41.2}, {"label": "18-29", "group": "Age", "pct": 29.1, "ci_lo": 20.7, "ci_hi": 37.6}, {"label": "45-59", "group": "Age", "pct": 37.4, "ci_lo": 29.9, "ci_hi": 44.8}, {"label": "60+", "group": "Age", "pct": 40.1, "ci_lo": 31.8, "ci_hi": 48.4}, {"label": "Man", "group": "Gender", "pct": 38.0, "ci_lo": 32.1, "ci_hi": 44.0}, {"label": "Woman", "group": "Gender", "pct": 32.2, "ci_lo": 26.4, "ci_hi": 37.9}, {"label": "Right (7-10)", "group": "Ideology", "pct": 65.6, "ci_lo": 58.1, "ci_hi": 73.1}, {"label": "Left (0-3)", "group": "Ideology", "pct": 8.2, "ci_lo": 3.7, "ci_hi": 12.8}, {"label": "Centre (4-6)", "group": "Ideology", "pct": 28.2, "ci_lo": 21.9, "ci_hi": 34.6}, {"label": "Not daily", "group": "Social media", "pct": 33.1, "ci_lo": 25.8, "ci_hi": 40.4}, {"label": "Daily SM user", "group": "Social media", "pct": 35.4, "ci_lo": 30.4, "ci_hi": 40.4}];
+  const groups = ['Age', 'Gender', 'Ideology', 'Social media'];
+  const labels = items.map(d => d.label).reverse();
+  const pcts = items.map(d => d.pct).reverse();
+  const ciLo = items.map(d => d.pct - d.ci_lo).reverse();
+  const ciHi = items.map(d => d.ci_hi - d.pct).reverse();
+  const grps = items.map(d => d.group).reverse();
+
+  // Add group separator lines
+  const shapes = [];
+  let prevGroup = grps[0];
+  for (let i = 1; i < grps.length; i++) {
+    if (grps[i] !== prevGroup) {
+      shapes.push({ type: 'line', x0: 0, x1: 100, y0: i - 0.5, y1: i - 0.5,
+                     line: { color: '#334155', width: 0.5 } });
+      prevGroup = grps[i];
+    }
+  }
+
+  Plotly.newPlot('fig4', [{
+    x: pcts, y: labels, type: 'scatter', mode: 'markers',
+    marker: { color: '#1A4AAD', size: 12 },
+    error_x: { type: 'data', symmetric: false, array: ciHi, arrayminus: ciLo,
+               color: '#1A4AAD', thickness: 2, width: 6 },
+    hovertemplate: '<b>%{y}</b>: %{x:.0f}%<extra></extra>',
+  }], {
+    ...darkLayout,
+    showlegend: false,
+    xaxis: { ...darkLayout.xaxis, title: '% who believe probably/definitely true', range: [0, 100],
+             dtick: 20 },
+    yaxis: { ...darkLayout.yaxis, automargin: true },
+    shapes: [
+      ...shapes,
+      { type: 'line', x0: 50, x1: 50, y0: -0.5, y1: labels.length - 0.5,
+         line: { color: '#475569', width: 1, dash: 'dash' } }
+    ],
+    margin: { l: 130, r: 30, t: 20, b: 50 },
+  }, plotlyConfig);
+}
+
+// ── Fig 5: Combined expression grouped dot plot ─────────────────────────────
+function initFig5() {
+  const items = [{"measure": "Express opinions online", "gender": "Cisgender", "pct": 27.6, "ci_lo": 27.5, "ci_hi": 27.6, "color": "#1A4AAD"}, {"measure": "Express opinions online", "gender": "Non-binary/Trans", "pct": 48.5, "ci_lo": 44.9, "ci_hi": 52.1, "color": "#1A4AAD"}, {"measure": "Respond to disagreeable posts", "gender": "Cisgender", "pct": 37.3, "ci_lo": 37.3, "ci_hi": 37.4, "color": "#D71B1E"}, {"measure": "Respond to disagreeable posts", "gender": "Non-binary/Trans", "pct": 56.2, "ci_lo": 52.6, "ci_hi": 59.8, "color": "#D71B1E"}, {"measure": "Discuss politics at work/school", "gender": "Cisgender", "pct": 31.6, "ci_lo": 31.5, "ci_hi": 31.7, "color": "#229A44"}, {"measure": "Discuss politics at work/school", "gender": "Non-binary/Trans", "pct": 53.5, "ci_lo": 49.4, "ci_hi": 57.5, "color": "#229A44"}, {"measure": "Discuss politics with coworkers", "gender": "Cisgender", "pct": 46.6, "ci_lo": 46.6, "ci_hi": 46.7, "color": "#FF8200"}, {"measure": "Discuss politics with coworkers", "gender": "Non-binary/Trans", "pct": 46.2, "ci_lo": 42.2, "ci_hi": 50.3, "color": "#FF8200"}];
+  const colorMap = {
+    '#1A4AAD': 'Express opinions online',
+    '#D71B1E': 'Respond to disagreeable posts',
+    '#229A44': 'Discuss politics at work/school',
+    '#FF8200': 'Discuss politics with coworkers',
+  };
+
+  // Group by gender
+  const genders = ['Non-binary/Trans', 'Cisgender'];
+  const measures = Object.values(colorMap);
+  const colorList = Object.keys(colorMap);
+
+  const traces = measures.map((measure, mi) => {
+    const color = colorList[mi];
+    const xs = [], ys = [], errLo = [], errHi = [], texts = [];
+    genders.forEach(g => {
+      const item = items.find(d => d.gender === g && d.measure === measure);
+      if (item) {
+        xs.push(item.pct);
+        ys.push(g);
+        errLo.push(item.pct - item.ci_lo);
+        errHi.push(item.ci_hi - item.pct);
+        texts.push(item.pct + '%');
+      }
+    });
+    return {
+      x: xs, y: ys, text: texts, textposition: 'top center',
+      textfont: { color: color, size: 12 },
+      type: 'scatter', mode: 'markers+text', name: measure,
+      marker: { color: color, size: 11 },
+      error_x: { type: 'data', symmetric: false, array: errHi, arrayminus: errLo,
+                 color: color, thickness: 2, width: 5 },
+      hovertemplate: '<b>' + measure + '</b><br>%{y}: %{x:.0f}%<extra></extra>',
+    };
+  });
+
+  Plotly.newPlot('fig5', traces, {
+    ...darkLayout,
+    legend: { orientation: 'h', y: -0.15, font: { size: 11 }, xanchor: 'center', x: 0.5 },
+    xaxis: { ...darkLayout.xaxis, title: '% (predicted)', range: [15, 70], dtick: 10 },
+    yaxis: { ...darkLayout.yaxis, automargin: true },
+    margin: { l: 140, r: 30, t: 20, b: 80 },
+  }, plotlyConfig);
+}
+
+show(0);
+</script>
+
+</body>
+</html>
