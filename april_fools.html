@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Very Serious Research Finding</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 800px;
+            width: 90%;
+            text-align: center;
+            position: relative;
+            transition: transform 0.5s ease;
+        }
+        h1 {
+            font-size: 1.3rem;
+            color: #333;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .subtitle {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 30px;
+        }
+        .chart-area {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+        canvas { width: 100%; height: 100%; }
+        .source {
+            font-size: 0.75rem;
+            color: #aaa;
+            text-align: left;
+        }
+        .reveal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .reveal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+        .reveal-card {
+            background: white;
+            border-radius: 16px;
+            padding: 50px;
+            max-width: 500px;
+            text-align: center;
+            transform: scale(0.8);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .reveal-overlay.show .reveal-card {
+            transform: scale(1);
+        }
+        .reveal-card h2 {
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+        }
+        .reveal-card p {
+            font-size: 1.1rem;
+            color: #555;
+            line-height: 1.6;
+        }
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            z-index: 200;
+            pointer-events: none;
+        }
+        .btn-reveal {
+            margin-top: 10px;
+            padding: 10px 28px;
+            background: #4a90d9;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-reveal:hover { background: #3a7bc8; }
+        .bar-label {
+            position: absolute;
+            font-size: 0.7rem;
+            color: #555;
+            text-align: center;
+            pointer-events: none;
+        }
+        .tooltip {
+            position: absolute;
+            background: #333;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="mainContainer">
+    <h1>Predictors of Researcher Productivity Loss (Hours/Week)</h1>
+    <div class="subtitle">Canadian Digital Media Research Network — Monthly Tracking Survey, 2024–2026 (N = 32,632)</div>
+    <div class="chart-area">
+        <canvas id="chart"></canvas>
+        <div class="tooltip" id="tooltip"></div>
+    </div>
+    <div class="source">Source: CDMRN Monthly Tracking Survey. Post-stratification weights applied. 95% CI shown.</div>
+    <button class="btn-reveal" id="downloadBtn">Download data (.csv)</button>
+</div>
+
+<div class="reveal-overlay" id="overlay">
+    <div class="reveal-card">
+        <h2>April Fools!</h2>
+        <p>No researchers were harmed in the making of this chart.<br><br>
+        ...but the Claude API bills are real.</p>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('chart');
+const ctx = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
+
+// Hi-DPI
+function resize() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * devicePixelRatio;
+    canvas.height = rect.height * devicePixelRatio;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+}
+resize();
+
+const W = canvas.parentElement.getBoundingClientRect().width;
+const H = canvas.parentElement.getBoundingClientRect().height;
+
+const categories = [
+    { label: "Waiting for\nHPC (Mika)", value: 3.2, color: "#4a90d9" },
+    { label: "Reading\nTwitter/X (Chris)", value: 5.8, color: "#e8655a" },
+    { label: "Waiting for\nClaude API (Aengus)", value: 4.1, color: "#f5a623" },
+    { label: "Meetings\nabout meetings", value: 6.5, color: "#7b68ee" },
+    { label: "Is this an\nincident? (Esli)", value: 2.4, color: "#50c878" },
+    { label: "Adding missing\nseeds (Saewon)", value: 4.9, color: "#ff69b4" },
+    { label: "Finding someone to\nrespond to media (Isabelle)", value: 5.3, color: "#daa520" },
+];
+
+const margin = { top: 30, right: 30, bottom: 70, left: 50 };
+const chartW = W - margin.left - margin.right;
+const chartH = H - margin.top - margin.bottom;
+const barGap = 16;
+const barW = (chartW - barGap * (categories.length - 1)) / categories.length;
+const maxVal = 10;
+
+let bars = categories.map((c, i) => ({
+    ...c,
+    x: margin.left + i * (barW + barGap),
+    targetH: (c.value / maxVal) * chartH,
+    currentH: 0,
+    wobble: 0,
+    fleeing: false,
+    vx: 0,
+    vy: 0,
+    ox: 0,
+    oy: 0,
+    hovered: false,
+    scared: 0,
+}));
+
+let mouseX = -100, mouseY = -100;
+let clickCount = 0;
+let phase = 'normal'; // normal -> scared -> flee -> reveal
+let fleeTimer = 0;
+
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+});
+
+canvas.addEventListener('click', () => {
+    clickCount++;
+    if (clickCount >= 3 && phase === 'normal') {
+        phase = 'scared';
+    }
+});
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+    if (phase === 'normal') {
+        phase = 'scared';
+        clickCount = 3;
+    } else if (phase !== 'reveal') {
+        triggerReveal();
+    }
+});
+
+function triggerReveal() {
+    phase = 'reveal';
+    const overlay = document.getElementById('overlay');
+    overlay.classList.add('show');
+    launchConfetti();
+}
+
+function launchConfetti() {
+    const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff69b4','#7b68ee','#20b2aa'];
+    for (let i = 0; i < 80; i++) {
+        setTimeout(() => {
+            const el = document.createElement('div');
+            el.className = 'confetti';
+            el.style.left = Math.random() * window.innerWidth + 'px';
+            el.style.top = '-10px';
+            el.style.background = colors[Math.floor(Math.random() * colors.length)];
+            el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+            el.style.width = (6 + Math.random() * 8) + 'px';
+            el.style.height = (6 + Math.random() * 8) + 'px';
+            document.body.appendChild(el);
+            const x = parseFloat(el.style.left);
+            let y = -10;
+            const speed = 2 + Math.random() * 4;
+            const drift = (Math.random() - 0.5) * 2;
+            const rot = Math.random() * 360;
+            function fall() {
+                y += speed;
+                el.style.top = y + 'px';
+                el.style.left = (x + Math.sin(y / 40) * drift * 20) + 'px';
+                el.style.transform = `rotate(${rot + y}deg)`;
+                if (y < window.innerHeight + 20) {
+                    requestAnimationFrame(fall);
+                } else {
+                    el.remove();
+                }
+            }
+            fall();
+        }, i * 30);
+    }
+}
+
+function drawAxis() {
+    ctx.strokeStyle = '#ddd';
+    ctx.lineWidth = 1;
+    ctx.fillStyle = '#999';
+    ctx.font = '11px Segoe UI, system-ui, sans-serif';
+    ctx.textAlign = 'right';
+
+    for (let v = 0; v <= maxVal; v += 2) {
+        const y = margin.top + chartH - (v / maxVal) * chartH;
+        ctx.beginPath();
+        ctx.moveTo(margin.left, y);
+        ctx.lineTo(W - margin.right, y);
+        ctx.stroke();
+        ctx.fillText(v + 'h', margin.left - 8, y + 4);
+    }
+}
+
+function drawBar(bar, i) {
+    const ease = Math.min(bar.currentH / bar.targetH, 1);
+    const x = bar.x + bar.ox;
+    const bh = bar.currentH;
+    const y = margin.top + chartH - bh + bar.oy;
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.06)';
+    ctx.beginPath();
+    ctx.roundRect(x + 3, y + 3, barW, bh, [4, 4, 0, 0]);
+    ctx.fill();
+
+    // Bar
+    ctx.fillStyle = bar.color;
+    if (bar.hovered && phase === 'normal') {
+        ctx.fillStyle = bar.color + 'cc';
+    }
+    ctx.beginPath();
+    ctx.roundRect(x, y, barW, bh, [4, 4, 0, 0]);
+    ctx.fill();
+
+    // Error bar (fake CI)
+    if (!bar.fleeing) {
+        const ciH = 12 + Math.random() * 0.3;
+        const cx = x + barW / 2;
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, y - ciH);
+        ctx.lineTo(cx, y + ciH);
+        ctx.moveTo(cx - 5, y - ciH);
+        ctx.lineTo(cx + 5, y - ciH);
+        ctx.moveTo(cx - 5, y + ciH);
+        ctx.lineTo(cx + 5, y + ciH);
+        ctx.stroke();
+    }
+
+    // Value label
+    if (!bar.fleeing) {
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 12px Segoe UI, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(bar.value.toFixed(1), x + barW / 2, y - 18);
+    }
+
+    // Eyes if scared
+    if (bar.scared > 0.3) {
+        const eyeY = y + 20;
+        const eyeX1 = x + barW * 0.35;
+        const eyeX2 = x + barW * 0.65;
+        const eyeR = 5 * bar.scared;
+        ctx.fillStyle = 'white';
+        ctx.beginPath(); ctx.arc(eyeX1, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(eyeX2, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#333';
+        const pupilOff = bar.fleeing ? 0 : Math.min(2, (mouseX - x - barW/2) / 30);
+        ctx.beginPath(); ctx.arc(eyeX1 + pupilOff, eyeY, eyeR * 0.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(eyeX2 + pupilOff, eyeY, eyeR * 0.5, 0, Math.PI * 2); ctx.fill();
+
+        // Mouth
+        if (bar.scared > 0.6) {
+            ctx.beginPath();
+            ctx.arc(x + barW / 2, eyeY + 14, 4 * bar.scared, 0, Math.PI);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+    }
+
+    // X-axis label
+    if (!bar.fleeing) {
+        ctx.fillStyle = '#555';
+        ctx.font = '10px Segoe UI, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        const lines = bar.label.split('\n');
+        lines.forEach((line, li) => {
+            ctx.fillText(line, bar.x + barW / 2, margin.top + chartH + 16 + li * 14);
+        });
+    }
+}
+
+function update() {
+    // Animate bars in
+    bars.forEach(b => {
+        if (b.currentH < b.targetH && !b.fleeing) {
+            b.currentH += (b.targetH - b.currentH) * 0.08;
+        }
+    });
+
+    // Hover detection
+    let anyHovered = false;
+    bars.forEach(b => {
+        const bx = b.x + b.ox;
+        const by = margin.top + chartH - b.currentH + b.oy;
+        b.hovered = mouseX >= bx && mouseX <= bx + barW && mouseY >= by && mouseY <= margin.top + chartH + b.oy;
+        if (b.hovered) anyHovered = true;
+    });
+
+    // Tooltip
+    if (anyHovered && phase === 'normal') {
+        const b = bars.find(b => b.hovered);
+        tooltip.style.opacity = 1;
+        tooltip.style.left = (b.x + barW / 2) + 'px';
+        tooltip.style.top = (margin.top + chartH - b.currentH - 50) + 'px';
+        tooltip.textContent = `${b.label.replace('\n', ' ')}: ${b.value.toFixed(1)} hrs/week (p < 0.001)`;
+    } else {
+        tooltip.style.opacity = 0;
+    }
+
+    // Scared phase
+    if (phase === 'scared') {
+        bars.forEach(b => {
+            b.scared = Math.min(1, b.scared + 0.03);
+            // Tremble
+            b.ox = (Math.random() - 0.5) * 4 * b.scared;
+            b.oy = (Math.random() - 0.5) * 2 * b.scared;
+        });
+        fleeTimer++;
+        if (fleeTimer > 80) {
+            phase = 'flee';
+            bars.forEach((b, i) => {
+                setTimeout(() => {
+                    b.fleeing = true;
+                    b.vx = (Math.random() - 0.5) * 12;
+                    b.vy = -(8 + Math.random() * 6);
+                }, i * 120);
+            });
+        }
+    }
+
+    // Flee phase
+    if (phase === 'flee') {
+        let allGone = true;
+        bars.forEach(b => {
+            if (b.fleeing) {
+                b.vy += 0.3; // gravity
+                b.ox += b.vx;
+                b.oy += b.vy;
+                if (b.oy < H + 200) allGone = false;
+            } else {
+                allGone = false;
+            }
+        });
+        if (allGone) {
+            setTimeout(triggerReveal, 500);
+            phase = 'done';
+        }
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, W, H);
+    drawAxis();
+    bars.forEach((b, i) => drawBar(b, i));
+}
+
+function loop() {
+    update();
+    draw();
+    if (phase !== 'reveal') requestAnimationFrame(loop);
+    else { draw(); } // one last frame
+}
+
+// Fake "roundRect" polyfill if needed
+if (!ctx.roundRect) {
+    ctx.roundRect = function(x, y, w, h, r) {
+        const radii = Array.isArray(r) ? r : [r,r,r,r];
+        this.moveTo(x + radii[0], y);
+        this.lineTo(x + w - radii[1], y);
+        this.quadraticCurveTo(x + w, y, x + w, y + radii[1]);
+        this.lineTo(x + w, y + h - radii[2]);
+        this.quadraticCurveTo(x + w, y + h, x + w - radii[2], y + h);
+        this.lineTo(x + radii[3], y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - radii[3]);
+        this.lineTo(x, y + radii[0]);
+        this.quadraticCurveTo(x, y, x + radii[0], y);
+        this.closePath();
+    };
+}
+
+loop();
+</script>
+</body>
+</html>
