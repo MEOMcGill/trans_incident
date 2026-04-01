@@ -8,10 +8,13 @@ Output: analysis/data/feb2026_threat_scan.parquet
 """
 
 import re
+import sys
 import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 DATA = "analysis/data/feb2026_incident_trans_union_keywords.parquet"
 OUT_DATA = "analysis/data/feb2026_threat_scan.parquet"
@@ -167,6 +170,8 @@ def main():
 
     # 3. Timeline
     ax = axes[2]
+    df["date"] = pd.to_datetime(df["date"], utc=True)
+    threats = df[df["has_threat"]]
     threats_daily = threats.set_index("date").resample("D").size()
     all_daily = df.set_index("date").resample("D").size()
     ax.fill_between(all_daily.index, all_daily.values, alpha=0.3, color="#bdc3c7", label="All posts")

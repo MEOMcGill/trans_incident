@@ -57,8 +57,9 @@ plt.savefig(f"{figdir}/keyword_filtered_feb26_platform_by_type.png", dpi=200)
 plt.close()
 print("2. keyword_filtered_feb26_platform_by_type.png")
 
-# ── 3. MainType distribution ─────────────────────────────────────────────────
-mt = df.groupby(["seed_MainType", "post_type"]).size().unstack(fill_value=0)
+# ── 3. MainType distribution (Feb 10 onward) ────────────────────────────────
+df_post = df[df["day"] >= pd.Timestamp("2026-02-10").date()]
+mt = df_post.groupby(["seed_MainType", "post_type"]).size().unstack(fill_value=0)
 mt = mt.reindex(columns=type_order, fill_value=0)
 mt = mt.loc[mt.sum(axis=1).sort_values(ascending=True).index]
 
@@ -66,9 +67,10 @@ fig, ax = plt.subplots(figsize=(10, 5))
 mt.plot.barh(stacked=True, color=[colors[c] for c in type_order], ax=ax)
 ax.set_xlabel("Number of posts")
 ax.set_title("Posts by seed type")
+fig.text(0.5, -0.02, "Feb 10–28, 2026", ha="center", fontsize=10, style="italic", color="#555")
 ax.legend(loc="lower right")
 plt.tight_layout()
-plt.savefig(f"{figdir}/keyword_filtered_feb26_maintype_by_type.png", dpi=200)
+plt.savefig(f"{figdir}/keyword_filtered_feb26_maintype_by_type.png", dpi=200, bbox_inches="tight")
 plt.close()
 print("3. keyword_filtered_feb26_maintype_by_type.png")
 

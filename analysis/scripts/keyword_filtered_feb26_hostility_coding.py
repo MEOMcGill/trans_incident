@@ -5,16 +5,16 @@ Qwen3.5-27B-FP8 via vLLM's OpenAI-compatible API.
 Input:  $HOME/scratch/trans_incident/data/feb2026_incident_trans_union_keywords.parquet
 Output: $HOME/scratch/trans_incident/output/hostility_coding_results.parquet
 
-Supports checkpointing — safe to resume after interruption.
+Supports checkpointing and async concurrent requests for throughput.
 """
 
 import argparse
-import json
+import asyncio
 import os
 import re
 import time
 import pandas as pd
-from openai import OpenAI
+from openai import AsyncOpenAI
 from prompt_hostile_speech_JR import SYSTEM_PROMPT, TASK_PROMPT_CODING
 
 TARGET_GROUP = "trans and queer people"
@@ -47,17 +47,14 @@ def parse_coding_response(text):
     for h in HALLMARK_NAMES:
         result[f"h_{h.lower().replace(' ', '_')}"] = 0
 
-    # Hostile language present
     match = re.search(r"\*\*Hostile Language Present:\*\*\s*(Yes|No)", text, re.IGNORECASE)
     if match:
         result["hostile_language_present"] = match.group(1).strip().lower() == "yes"
 
-    # Group referenced
     match = re.search(r"\*\*Group Referenced:\*\*\s*(.+)", text)
     if match:
         result["group_referenced"] = match.group(1).strip()
 
-    # Hallmark scores
     for h in HALLMARK_NAMES:
         pattern = rf"{re.escape(h)}[:\s]*\[?(\d)\]?"
         match = re.search(pattern, text, re.IGNORECASE)
@@ -67,41 +64,58 @@ def parse_coding_response(text):
     return result
 
 
-def classify_post(client, model, post_text, post_id, max_retries=3):
-    """Send a single post through the coding prompt."""
+async def classify_post(client, model, post_text, post_id, semaphore, max_retries=3):
+    """Send a single post through the coding prompt with concurrency control."""
     user_prompt = TASK_PROMPT_CODING.replace(
         "[INPUT_GROUP]", TARGET_GROUP
     ).replace(
-        "[INPUT_EXCERPT]", post_text[:4000]  # truncate very long posts
+        "[INPUT_EXCERPT]", post_text[:4000]
     )
 
-    for attempt in range(max_retries):
-        try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-                max_tokens=1500,
-                temperature=0.1,
-                extra_body={"chat_template_kwargs": {"enable_thinking": False}},
-            )
-            return parse_coding_response(response.choices[0].message.content)
-        except Exception as e:
-            print(f"  Post {post_id} attempt {attempt + 1} failed: {e}")
-            if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)
+    async with semaphore:
+        for attempt in range(max_retries):
+            try:
+                response = await client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    max_tokens=1000,
+                    temperature=0.1,
+                    extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+                )
+                return parse_coding_response(response.choices[0].message.content)
+            except Exception as e:
+                print(f"  Post {post_id} attempt {attempt + 1} failed: {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2 ** attempt)
     return {"raw_response": f"FAILED after {max_retries} attempts", "hostile_language_present": None}
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=8197)
-    parser.add_argument("--model", type=str, required=True)
-    parser.add_argument("--batch-size", type=int, default=50, help="Save checkpoint every N posts")
-    args = parser.parse_args()
+async def process_batch(client, model, rows, semaphore):
+    """Process a batch of rows concurrently."""
+    tasks = []
+    for _, row in rows.iterrows():
+        post_text = str(row.get("text", "") or row.get("search_text", ""))
+        if not post_text.strip():
+            continue
+        task = classify_post(client, model, post_text, row["id"], semaphore)
+        tasks.append((row, task))
 
+    results = []
+    for row, task in tasks:
+        result = await task
+        result["id"] = row["id"]
+        result["date"] = row["date"]
+        result["platform"] = row["platform"]
+        result["seed_SeedName"] = row.get("seed_SeedName", "")
+        result["seed_MainType"] = row.get("seed_MainType", "")
+        results.append(result)
+    return results
+
+
+async def main_async(args):
     scratch = os.path.join(os.environ["HOME"], "scratch", "trans_incident")
     data_path = os.path.join(scratch, "data", "feb2026_incident_trans_union_keywords.parquet")
     output_dir = os.path.join(scratch, "output")
@@ -110,11 +124,14 @@ def main():
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # Load data
     df = pd.read_parquet(data_path)
     print(f"Loaded {len(df)} posts")
 
-    # Check for checkpoint
+    # Filter to trans/queer posts only (includes "both" posts)
+    df = df[df["is_trans"] == True].reset_index(drop=True)
+    print(f"Filtered to {len(df)} trans/queer posts")
+
+    # Resume from checkpoint
     completed_ids = set()
     results = []
     if os.path.exists(checkpoint_path):
@@ -123,7 +140,6 @@ def main():
         results = checkpoint.to_dict("records")
         print(f"Resuming from checkpoint: {len(completed_ids)} already done")
 
-    # Filter to remaining
     remaining = df[~df["id"].isin(completed_ids)]
     print(f"Posts remaining: {len(remaining)}")
 
@@ -131,34 +147,52 @@ def main():
         print("All posts already classified")
         if results:
             pd.DataFrame(results).to_parquet(output_path, index=False)
-            print(f"Final results saved to {output_path}")
         return
 
-    client = OpenAI(base_url=f"http://localhost:{args.port}/v1", api_key="not-needed")
+    client = AsyncOpenAI(base_url=f"http://localhost:{args.port}/v1", api_key="not-needed")
+    semaphore = asyncio.Semaphore(args.concurrency)
 
     t0 = time.time()
-    for i, (_, row) in enumerate(remaining.iterrows()):
-        post_text = str(row.get("text", "") or row.get("search_text", ""))
-        if not post_text.strip():
-            continue
+    checkpoint_interval = args.checkpoint_every
+    batch_size = args.concurrency * 2  # feed enough to keep the pipeline full
 
-        result = classify_post(client, args.model, post_text, row["id"])
-        result["id"] = row["id"]
-        result["date"] = row["date"]
-        result["platform"] = row["platform"]
-        result["seed_SeedName"] = row.get("seed_SeedName", "")
-        result["seed_MainType"] = row.get("seed_MainType", "")
-        results.append(result)
+    # Process in batches for checkpointing
+    total_remaining = len(remaining)
+    processed = 0
 
-        # Progress
-        if (i + 1) % 10 == 0:
-            elapsed = time.time() - t0
-            rate = (i + 1) / elapsed
-            eta = (len(remaining) - i - 1) / rate if rate > 0 else 0
-            print(f"  {i + 1}/{len(remaining)} ({rate:.1f} posts/sec, ETA: {eta / 60:.0f} min)")
+    for batch_start in range(0, total_remaining, batch_size):
+        batch_end = min(batch_start + batch_size, total_remaining)
+        batch = remaining.iloc[batch_start:batch_end]
 
-        # Checkpoint
-        if (i + 1) % args.batch_size == 0:
+        # Fire all requests in the batch concurrently (semaphore limits in-flight)
+        tasks = []
+        row_list = []
+        for _, row in batch.iterrows():
+            post_text = str(row.get("text", "") or row.get("search_text", ""))
+            if not post_text.strip():
+                continue
+            row_list.append(row)
+            tasks.append(classify_post(client, model=args.model, post_text=post_text,
+                                       post_id=row["id"], semaphore=semaphore))
+
+        batch_results = await asyncio.gather(*tasks)
+
+        for row, result in zip(row_list, batch_results):
+            result["id"] = row["id"]
+            result["date"] = row["date"]
+            result["platform"] = row["platform"]
+            result["seed_SeedName"] = row.get("seed_SeedName", "")
+            result["seed_MainType"] = row.get("seed_MainType", "")
+            results.append(result)
+
+        processed += len(row_list)
+        elapsed = time.time() - t0
+        rate = processed / elapsed if elapsed > 0 else 0
+        eta = (total_remaining - processed) / rate if rate > 0 else 0
+        print(f"  {processed}/{total_remaining} ({rate:.1f} posts/sec, ETA: {eta / 60:.0f} min)")
+
+        # Checkpoint periodically
+        if processed % checkpoint_interval < batch_size:
             pd.DataFrame(results).to_parquet(checkpoint_path, index=False)
             print(f"  Checkpoint saved ({len(results)} total)")
 
@@ -171,10 +205,21 @@ def main():
     print(f"\nDone. {len(results)} posts classified in {elapsed / 60:.1f} min")
     print(f"Results saved to {output_path}")
 
-    # Quick summary
     if "hostile_language_present" in results_df.columns:
         hostile = results_df["hostile_language_present"].sum()
         print(f"Hostile posts found: {hostile} / {len(results_df)} ({100 * hostile / len(results_df):.1f}%)")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=8197)
+    parser.add_argument("--model", type=str, required=True)
+    parser.add_argument("--concurrency", type=int, default=30,
+                        help="Max concurrent requests to vLLM")
+    parser.add_argument("--checkpoint-every", type=int, default=200,
+                        help="Save checkpoint every N posts")
+    args = parser.parse_args()
+    asyncio.run(main_async(args))
 
 
 if __name__ == "__main__":
