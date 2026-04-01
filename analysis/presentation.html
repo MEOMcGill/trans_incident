@@ -378,10 +378,15 @@
   </div>
 </div>
 
+<!-- Slide 20: One More Thing -->
+<div class="slide" data-slide="19" style="padding: 0;">
+  <iframe id="bonus-frame" style="width: 100%; height: 100vh; border: none;" data-src="../april_fools.html"></iframe>
+</div>
+
 <!-- Navigation -->
 <div class="nav">
   <button onclick="prev()">&larr; Prev</button>
-  <span class="counter" id="counter">1 / 19</span>
+  <span class="counter" id="counter">1 / 20</span>
   <button onclick="next()">Next &rarr;</button>
 </div>
 <div class="keyboard-hint" id="hint">Arrow keys or Space to navigate</div>
@@ -409,6 +414,10 @@ function show(n) {
     chartInited.add(idx);
     if (idx === 6) initFig1();
     if (idx === 10) initFig3();
+    if (idx === 19) {
+      const frame = document.getElementById('bonus-frame');
+      if (frame && !frame.src) frame.src = frame.dataset.src;
+    }
   }
 }
 
