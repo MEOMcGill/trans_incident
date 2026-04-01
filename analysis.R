@@ -20,55 +20,65 @@ cat("Raw rows:", nrow(data), "\n")
 data <- clean_survey_data(data, catalogue)
 data <- weight_survey_data(data, catalogue, method = "rake")
 
-write.csv(data, "harmonized_data.csv", row.names = FALSE)
+# DO NOT overwrite harmonized_data.csv — models.R reads it too
 
 # ── 2. Recode variables ─────────────────────────────────────────────────────
 
-# Harmonize pol_speech scales: codes 1,3,4,5,6 → 1,2,3,4,5
-# The general items use codes 1,3,4,5,6; Kirk items use 1,2,3,4,5
-# Remap general items to 1-5 scale
-recode_comfort <- function(x, is_kirk = FALSE) {
+# Check actual comfort scale values
+cat("\npol_speech_1 values:\n")
+print(table(data$pol_speech_1, useNA = "ifany"))
+
+# Actual data uses 0-based coding: 0=Not at all, 1=Not very, 2=Somewhat, 3=Comfortable, 4=Very
+# Recode to 1-5 scale
+recode_comfort_0based <- function(x) {
   x <- as.numeric(x)
-  if (is_kirk) return(x)  # Already 1-5
   dplyr::case_when(
-    x == 1 ~ 1,  # Not at all comfortable
-    x == 3 ~ 2,  # Not very comfortable (was code 3, no code 2 in original)
-    x == 4 ~ 3,  # Somewhat comfortable
-    x == 5 ~ 4,  # Comfortable
-    x == 6 ~ 5,  # Very comfortable
-    TRUE ~ NA_real_
+    x == 0 ~ 1L,  # Not at all comfortable
+    x == 1 ~ 2L,  # Not very comfortable
+    x == 2 ~ 3L,  # Somewhat comfortable
+    x == 3 ~ 4L,  # Comfortable
+    x == 4 ~ 5L,  # Very comfortable
+    TRUE ~ NA_integer_
   )
 }
 
 data <- data %>%
   mutate(
-    pol_speech_1_r = recode_comfort(pol_speech_1),
-    pol_speech_2_r = recode_comfort(pol_speech_2),
-    pol_speech_3_r = recode_comfort(pol_speech_3),
-    chilled_kirk_1_r = recode_comfort(chilled_kirk_1, is_kirk = TRUE),
-    chilled_kirk_2_r = recode_comfort(chilled_kirk_2, is_kirk = TRUE),
-    chilled_kirk_3_r = recode_comfort(chilled_kirk_3, is_kirk = TRUE)
+    pol_speech_1_r = recode_comfort_0based(pol_speech_1),
+    pol_speech_2_r = recode_comfort_0based(pol_speech_2),
+    pol_speech_3_r = recode_comfort_0based(pol_speech_3)
   )
 
-# Gender identity variable
-# gender1: 1=Man, 2=Woman, 5=Another way, 6=Non-binary, 7=DK
-# gender (Federal Post-Election): same coding via catalogue
-# gender2: 1=Yes trans, 2=No, 3=DK
+# Kirk items (only in 2025_10_Tracking) — already 1-5 scale, no recode needed
+if ("chilled_kirk_1" %in% names(data)) {
+  data <- data %>%
+    mutate(
+      chilled_kirk_1_r = as.integer(chilled_kirk_1),
+      chilled_kirk_2_r = as.integer(chilled_kirk_2),
+      chilled_kirk_3_r = as.integer(chilled_kirk_3)
+    )
+}
+
+# Gender identity variable (actual CSV coding, 0-based):
+# gender1: 0=Man, 1=Woman, 2=Non-binary/Other, 3=Another way, 99=DK
+# gender (Federal Post-Election): same coding
+# gender2: 0=Not trans, 1=Yes trans, 99=DK
 data <- data %>%
   mutate(
     gender1_num = as.numeric(gender1),
-    # Coalesce gender1 and gender columns
+    # Coalesce gender1 and gender columns (Fed Post-Election uses "gender")
     gender_identity = coalesce(gender1_num, as.numeric(gender)),
     gender_group = case_when(
-      gender_identity == 1 ~ "Man",
-      gender_identity == 2 ~ "Woman",
-      gender_identity %in% c(5, 6) ~ "Non-binary / Other",
-      gender_identity == 7 ~ NA_character_,  # DK — exclude
+      gender_identity == 0 ~ "Man",
+      gender_identity == 1 ~ "Woman",
+      gender_identity %in% c(2, 3) ~ "Non-binary / Other",
+      gender_identity == 99 ~ NA_character_,  # DK — exclude
       TRUE ~ NA_character_
     ),
     is_trans = case_when(
       as.numeric(gender2) == 1 ~ "Transgender",
-      as.numeric(gender2) == 2 ~ "Not transgender",
+      as.numeric(gender2) == 0 ~ "Not transgender",
+      as.numeric(gender2) == 99 ~ NA_character_,  # DK — exclude
       TRUE ~ NA_character_
     ),
     # Combined IV: non-cis group
@@ -242,12 +252,13 @@ nb_trans_long <- nb_trans_counts %>%
     )
   )
 
-p3 <- ggplot(nb_trans_long,
+p3 <- ggplot(nb_trans_long %>% filter(!is.na(survey_month)),
              aes(x = survey_month, y = n, color = group_label)) +
   geom_line(linewidth = 0.8) +
   geom_point(size = 2) +
   geom_vline(xintercept = as.Date("2025-09-10"), linetype = "dashed", color = "grey40") +
-  annotate("text", x = as.Date("2025-09-10"), y = max(nb_trans_long$n, na.rm = TRUE) * 0.95,
+  annotate("text", x = as.Date("2025-09-10"),
+           y = max(nb_trans_long$n[!is.na(nb_trans_long$survey_month)], na.rm = TRUE) * 0.95,
            label = "Kirk assassination", hjust = -0.05,
            size = 2.8, color = "grey40", family = "poppins") +
   scale_color_manual(values = c("Non-binary / Other gender" = "#FF8200",

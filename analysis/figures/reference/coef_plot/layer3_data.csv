@@ -1,0 +1,4 @@
+"label","x","y","PANEL","group","nudge_x","nudge_y","colour","family","size","angle","hjust","vjust","alpha","fontface","lineheight"
+"b = 0.44 (N = 30,702)",0.442802407666395,3,"1",3,0,0,"black","poppins",3,0,-0.1,-0.8,NA,1,1.2
+"b = 0.32 (N = 30,641)",0.323331670473226,2,"1",2,0,0,"black","poppins",3,0,-0.1,-0.8,NA,1,1.2
+"b = 0.31 (N = 30,573)",0.310467825544435,1,"1",1,0,0,"black","poppins",3,0,-0.1,-0.8,NA,1,1.2
